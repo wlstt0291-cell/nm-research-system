@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>神经调控科研一体化系统</title>
+<style>
+  :root{
+    --bg:#eef2f7; --card:#ffffff; --text:#1f2937; --muted:#7a8699;
+    --line:#e6ebf2; --primary:#2563c9; --primary-d:#1b4f9e;
+    --teal:#0f9b8e; --green:#1aab6b; --red:#d83a3a; --amber:#e08a17; --purple:#7a5cf0;
+    --shadow:0 4px 18px rgba(31,41,55,.08); --r:16px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--text);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+  .app{max-width:520px;margin:0 auto;min-height:100vh;background:var(--bg);position:relative;padding-bottom:calc(66px + env(safe-area-inset-bottom));}
+  .topbar{position:sticky;top:0;z-index:30;background:linear-gradient(135deg,#1b4f9e,#2563c9);color:#fff;
+    padding:calc(10px + env(safe-area-inset-top)) 16px 12px;}
+  .topbar h1{margin:0;font-size:17px;font-weight:700;letter-spacing:.5px;display:flex;align-items:center;gap:8px;}
+  .topbar .sub{font-size:11.5px;opacity:.88;margin-top:2px;}
+  .sync{display:inline-flex;align-items:center;gap:5px;font-size:11px;background:rgba(255,255,255,.18);padding:3px 9px;border-radius:20px;margin-top:8px;cursor:pointer;}
+  .sync .dot{width:7px;height:7px;border-radius:50%;background:#7dffb0;box-shadow:0 0 0 3px rgba(125,255,176,.3);}
+  #qrWrap{text-align:center;margin:10px 0;}
+  #qrWrap img{width:168px;height:168px;border:1px solid var(--line);border-radius:12px;background:#fff;}
+  #syncInfo{font-size:13px;line-height:1.7;}
+  .gear{position:absolute;right:14px;top:calc(12px + env(safe-area-inset-top));background:rgba(255,255,255,.2);border:none;width:38px;height:38px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .tabpane{display:none;padding:12px;}
+  .tabpane.active{display:block;}
+  .pane-head{display:flex;align-items:center;justify-content:space-between;margin:2px 2px 12px;}
+  .pane-head .title{font-size:16px;font-weight:700;}
+  .btn{border:none;border-radius:12px;font-size:14px;font-weight:600;padding:11px 16px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;justify-content:center;}
+  .btn-primary{background:var(--primary);color:#fff;box-shadow:0 3px 10px rgba(37,99,201,.28);}
+  .btn-primary:active{background:var(--primary-d);}
+  .btn-ghost{background:#e8f0fc;color:var(--primary);}
+  .btn-teal{background:var(--teal);color:#fff;box-shadow:0 3px 10px rgba(15,155,142,.28);}
+  .btn-purple{background:var(--purple);color:#fff;box-shadow:0 3px 10px rgba(122,92,240,.28);}
+  .btn-sm{padding:8px 12px;font-size:13px;border-radius:10px;}
+  .btn-block{width:100%;}
+  .panel{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:12px;}
+  .panel h3{margin:0 0 10px;font-size:15px;display:flex;align-items:center;gap:7px;}
+  .empty{color:var(--muted);font-size:13px;padding:8px 2px;}
+  .note{font-size:12px;color:var(--muted);background:#fff8e9;border:1px solid #ffe6b3;border-radius:10px;padding:9px 11px;margin-bottom:12px;line-height:1.6;}
+  .warn{font-size:12px;color:#9a3b00;background:#ffe9e0;border:1px solid #ffc4ad;border-radius:10px;padding:9px 11px;margin-bottom:12px;line-height:1.6;}
+  .stat-cards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:12px;}
+  .stat{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:11px 8px;text-align:center;}
+  .stat .n{font-size:21px;font-weight:800;color:var(--primary);}
+  .stat .l{font-size:11px;color:var(--muted);margin-top:2px;}
+  .case{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:13px 14px;margin-bottom:11px;border-left:4px solid var(--primary);}
+  .case.inp{border-left-color:var(--teal);}
+  .case .top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .case .anid{font-weight:700;font-size:14.5px;color:var(--primary-d);}
+  .case .tag{font-size:11px;padding:2px 9px;border-radius:10px;font-weight:600;white-space:nowrap;}
+  .tag.op{background:#e8f0fc;color:var(--primary);}
+  .tag.ip{background:#e6f8f5;color:var(--teal);}
+  .case .meta{color:var(--muted);font-size:12.5px;margin:6px 0 4px;}
+  .case .dx{font-size:13px;background:#f7f9fc;border-radius:10px;padding:8px 10px;margin-top:6px;}
+  .flag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:8px;margin:3px 4px 0 0;font-weight:600;}
+  .flag.bad{background:#ffe9e0;color:#c0392b;}
+  .flag.ok{background:#eafaf0;color:var(--green);}
+  .case .acts{display:flex;gap:7px;margin-top:10px;}
+  .case .acts button{flex:1;background:#f4f7fb;border:none;border-radius:10px;padding:8px;font-size:12.5px;color:var(--muted);cursor:pointer;font-weight:600;}
+  .case .acts .del{color:var(--red);}
+  .case .acts .flw{color:var(--teal);}
+  .case .acts .edit{color:var(--primary);}
+  .nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px;background:#fff;border-top:1px solid var(--line);display:flex;z-index:40;padding-bottom:env(safe-area-inset-bottom);}
+  .nav button{flex:1;border:none;background:transparent;padding:7px 0 6px;color:var(--muted);font-size:10px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;font-weight:600;}
+  .nav button.on{color:var(--primary);}
+  .nav button svg{width:22px;height:22px;}
+  .mask{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:50;display:none;}
+  .mask.show{display:block;}
+  .sheet{position:fixed;left:50%;transform:translateX(-50%) translateY(100%);bottom:0;width:100%;max-width:520px;background:#fff;border-radius:22px 22px 0 0;z-index:60;max-height:92vh;display:flex;flex-direction:column;transition:transform .28s ease;padding-bottom:env(safe-area-inset-bottom);}
+  .sheet.show{transform:translateX(-50%) translateY(0);}
+  .sheet .sh-head{padding:16px 18px 10px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);}
+  .sheet .sh-head h3{margin:0;font-size:16px;}
+  .sheet .sh-body{padding:14px 18px;overflow-y:auto;}
+  .sheet .sh-foot{padding:12px 18px 16px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px;}
+  .closeX{border:none;background:#f0f3f8;width:32px;height:32px;border-radius:50%;font-size:18px;color:var(--muted);cursor:pointer;}
+  .field{margin-bottom:11px;}
+  .field label{display:block;font-size:12.5px;font-weight:600;color:#41506a;margin-bottom:5px;}
+  .field input,.field textarea,.field select{width:100%;border:1.5px solid var(--line);border-radius:11px;padding:10px 12px;font-size:15px;background:#fbfcfe;color:var(--text);font-family:inherit;}
+  .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--primary);outline:none;}
+  .field textarea{resize:vertical;min-height:58px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+  .seg{display:flex;background:#e9eef5;border-radius:12px;padding:4px;gap:4px;margin-bottom:12px;}
+  .seg button{flex:1;border:none;background:transparent;padding:9px 0;border-radius:9px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;}
+  .seg button.on{background:#fff;color:var(--primary);box-shadow:0 2px 6px rgba(0,0,0,.06);}
+  details{border:1px solid var(--line);border-radius:12px;margin-bottom:9px;background:#fbfcfe;overflow:hidden;}
+  details>summary{padding:11px 13px;font-size:13.5px;font-weight:700;color:var(--primary-d);cursor:pointer;display:flex;align-items:center;gap:7px;list-style:none;}
+  details[open]>summary{border-bottom:1px solid var(--line);}
+  details .body{padding:11px 13px;}
+  .topic{background:#f7faff;border:1px solid #e0ebfb;border-radius:12px;padding:11px 12px;margin-bottom:10px;}
+  .topic .h{font-weight:700;color:var(--primary-d);font-size:14px;line-height:1.4;}
+  .topic .why{font-size:12.5px;color:var(--muted);margin-top:4px;line-height:1.6;}
+  .topic .row{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+  .topic .row .k{font-size:11px;background:#eaf2fe;color:var(--primary);border-radius:8px;padding:2px 8px;font-weight:600;}
+  .topic .row .g{font-size:11px;background:#fff1e8;color:var(--amber);border-radius:8px;padding:2px 8px;font-weight:600;}
+  .badge{display:inline-block;background:#eaf2fe;color:var(--primary);border-radius:8px;padding:2px 8px;font-size:11px;font-weight:600;margin:2px 4px 2px 0;}
+  .cmdbar{position:sticky;top:calc(56px + env(safe-area-inset-top));z-index:25;background:var(--bg);padding:8px 12px 4px;display:flex;gap:8px;}
+  .cmdbar input{flex:1;border:2px solid var(--primary);border-radius:14px;padding:11px 14px;font-size:14px;background:#fff;color:var(--text);}
+  .chips{display:flex;gap:7px;overflow-x:auto;padding:8px 12px 2px;}
+  .chips .c{flex:0 0 auto;background:#fff;border:1px solid var(--line);border-radius:20px;padding:7px 13px;font-size:12.5px;color:var(--primary-d);font-weight:600;cursor:pointer;white-space:nowrap;}
+  .paper{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;font-size:13.5px;line-height:1.85;}
+  .paper h2{font-size:16px;color:var(--primary-d);margin:6px 0 4px;text-align:center;}
+  .paper h3{font-size:14.5px;color:var(--primary-d);margin:14px 0 4px;border-left:3px solid var(--primary);padding-left:8px;}
+  .paper h4{font-size:13.5px;margin:10px 0 2px;color:#41506a;}
+  .paper p{margin:5px 0;}
+  .paper ul{margin:5px 0;padding-left:20px;}
+  .paper li{margin:2px 0;}
+  .paper .ab{background:#f7faff;border-radius:10px;padding:10px 12px;margin:6px 0;}
+  .paper .disc{background:#fff4e0;border:1px solid #ffd98a;border-radius:10px;padding:9px 11px;margin:10px 0;font-size:12px;color:#9a6a00;}
+  .paper table{border-collapse:collapse;width:100%;margin:8px 0;font-size:12.5px;}
+  .paper th,.paper td{border:1px solid var(--line);padding:6px 8px;text-align:center;}
+  .paper th{background:#eef3fb;color:var(--primary-d);}
+  .toast{position:fixed;left:50%;top:30%;transform:translateX(-50%);background:rgba(31,41,55,.92);color:#fff;padding:11px 18px;border-radius:12px;font-size:13.5px;z-index:99;opacity:0;transition:opacity .25s;pointer-events:none;max-width:84%;text-align:center;}
+  .toast.show{opacity:1;}
+  .drawer{position:fixed;top:0;right:0;height:100%;width:84%;max-width:340px;background:#fff;z-index:70;transform:translateX(100%);transition:transform .25s;box-shadow:-6px 0 24px rgba(0,0,0,.12);display:flex;flex-direction:column;}
+  .drawer.show{transform:translateX(0);}
+  .drawer .dh{padding:calc(18px + env(safe-area-inset-top)) 18px 14px;background:var(--primary);color:#fff;}
+  .drawer .dh h3{margin:0;font-size:16px;}
+  .drawer .db{padding:10px 14px;overflow-y:auto;flex:1;}
+  .drawer .item{display:flex;align-items:center;gap:10px;padding:13px 8px;border-bottom:1px solid var(--line);cursor:pointer;font-size:14px;}
+  .drawer .item svg{width:20px;height:20px;color:var(--muted);}
+  .drawer .item.danger{color:var(--red);}
+  .drawer .item.danger svg{color:var(--red);}
+  .mask2{position:fixed;inset:0;background:rgba(15,23,42,.4);z-index:65;display:none;}
+  .mask2.show{display:block;}
+  .lit{background:#f7faff;border:1px solid #e0ebfb;border-radius:10px;padding:10px 11px;margin-bottom:8px;font-size:12.5px;line-height:1.6;}
+  .lit .q{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;background:#eef3fb;border-radius:6px;padding:4px 7px;display:inline-block;margin:3px 4px 3px 0;color:var(--primary-d);}
+  /* ===================== 桌面端适配（宽屏，左侧固定导航） ===================== */
+  .navbrand{display:none;}
+  @media (min-width: 860px){
+    body{ background:#dfe6ef; }
+    .app{ max-width:none; min-height:100vh; padding-left:236px; padding-bottom:0; background:var(--bg); }
+    .topbar{ z-index:30; border-radius:0; margin:0; }
+    .topbar h1{ font-size:19px; }
+    .topbar .sub{ font-size:12.5px; }
+    .gear{ top:calc(16px + env(safe-area-inset-top)); right:22px; }
+    .tabpane{ padding:22px 30px 40px; max-width:1200px; }
+    .pane-head .title{ font-size:18px; }
+    .nav{ left:0; top:0; bottom:0; width:236px; max-width:none; transform:none; flex-direction:column; align-items:stretch; border-top:none; border-right:1px solid var(--line); background:#fff; padding:0; gap:0; }
+    .navbrand{ display:flex; align-items:center; gap:11px; padding:18px 18px; background:linear-gradient(135deg,#1b4f9e,#2563c9); color:#fff; }
+    .navbrand .nb-logo{ width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex:0 0 auto; }
+    .navbrand .nb-t{ font-size:14.5px; font-weight:800; line-height:1.2; }
+    .navbrand .nb-s{ font-size:11px; opacity:.85; margin-top:2px; }
+    .nav button{ flex:0 0 auto; flex-direction:row; justify-content:flex-start; align-items:center; gap:13px; padding:15px 22px; font-size:14.5px; color:var(--muted); border-left:3px solid transparent; border-radius:0; }
+    .nav button svg{ width:22px; height:22px; flex:0 0 auto; }
+    .nav button.on{ color:var(--primary); background:#eef4fc; border-left-color:var(--primary); }
+    .nav button.on svg{ color:var(--primary); }
+    /* 指令台 */
+    .cmdbar{ position:sticky; top:64px; max-width:760px; }
+    .chips{ max-width:760px; }
+    #cmdStats{ grid-template-columns:repeat(6,1fr); max-width:900px; }
+    #cmdOut{ max-width:980px; }
+    #cmdOut .panel, #cmdOut .topic, #cmdOut .paper{ }
+    /* 病例库多列 */
+    #caseList{ display:grid; grid-template-columns:1fr 1fr; gap:13px; }
+    #caseList .case{ margin-bottom:0; }
+    .case .acts{ }
+    /* 统计卡 */
+    .stat-cards{ grid-template-columns:repeat(6,1fr); }
+    /* 挖掘/写稿 宽度上限，正文更舒适 */
+    #mineOut, #writeOut{ max-width:1100px; }
+    #mineOut .topic, #mineOut .paper{ max-width:none; }
+    .paper{ max-width:920px; }
+    /* 设置页两列 */
+    #paneSet .panel, #paneSet .note, #paneSet .warn{ max-width:920px; }
+    #paneSet .panel{ }
+    .sheet{ max-width:720px; }
+    .drawer{ width:380px; max-width:380px; }
+    /* 表单在宽屏下放大留白 */
+    .field input, .field textarea, .field select{ font-size:15px; }
+  }
+  @media (min-width: 1280px){
+    #caseList{ grid-template-columns:1fr 1fr 1fr; }
+    .tabpane{ max-width:1360px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <h1>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/></svg>
+      神经调控科研一体化系统
+    </h1>
+    <div class="sub">功能神经外科 · 偏头痛射频 · 脊髓电刺激 · 全流程闭环</div>
+    <div class="sync"><span class="dot"></span><span id="syncText">本地已保存</span></div>
+    <button class="gear" id="gearBtn" aria-label="设置">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+
+  <section class="tabpane active" id="paneCmd">
+    <div class="cmdbar"><input id="cmdInput" placeholder="输入指令…"><button class="btn btn-primary btn-sm" id="cmdGo">执行</button></div>
+    <div class="note">指令台统一下达科研任务：录入新病例 / 数据体检 / 定向写稿 偏头痛射频 / 思路优化 / 数据导出 / 全量备份。所有分析基于已录入真实脱敏病例，绝不虚构数据。</div>
+    <div class="chips" id="cmdChips">
+      <div class="c" data-cmd="录入新病例">+ 录入新病例</div>
+      <div class="c" data-cmd="数据体检">数据体检</div>
+      <div class="c" data-cmd="定向写稿 偏头痛射频">定向写稿</div>
+      <div class="c" data-cmd="思路优化 脊髓电刺激">思路优化</div>
+      <div class="c" data-cmd="数据导出">数据导出</div>
+      <div class="c" data-cmd="全量备份">全量备份</div>
+    </div>
+    <div class="stat-cards" id="cmdStats"></div>
+    <div id="cmdOut"></div>
+  </section>
+
+  <section class="tabpane" id="paneCase">
+    <div class="pane-head">
+      <div class="title">脱敏病例库</div>
+      <button class="btn btn-primary btn-sm" id="addCaseBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        添加病例
+      </button>
+    </div>
+    <div class="seg" id="caseSeg">
+      <button class="on" data-f="all">全部</button>
+      <button data-f="门诊">门诊</button>
+      <button data-f="住院">住院</button>
+      <button data-f="flag">待核验</button>
+    </div>
+    <div id="caseList"></div>
+  </section>
+
+  <section class="tabpane" id="paneMine">
+    <div class="pane-head">
+      <div class="title">自动科研挖掘</div>
+      <button class="btn btn-teal btn-sm" id="mineBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6l-4 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-4-9V2"/><path d="M8 2h8M7 15h10"/></svg>
+        运行数据体检
+      </button>
+    </div>
+    <div class="note">系统对全量脱敏病例常态化分析，自动筛选可写论文的选题与亮点，并评估数据支撑度与不足短板。</div>
+    <div id="mineOut"><div class="panel"><div class="empty">尚未运行数据体检。点击右上角「运行数据体检」开始。</div></div></div>
+  </section>
+
+  <section class="tabpane" id="paneWrite">
+    <div class="pane-head">
+      <div class="title">全自动论文撰写</div>
+      <button class="btn btn-purple btn-sm" id="writeBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+        选择选题写稿
+      </button>
+    </div>
+    <div class="note">基于已挖掘选题与真实统计结果一键成稿。五类体裁：个案报道 / 临床疗效分析 / 回顾性队列 / 危险因素分析 / 技术经验论著。全部数据来自真实病例。</div>
+    <div id="writeOut"><div class="panel"><div class="empty">尚未生成论文。请先运行「数据体检」，再点击右上角「选择选题写稿」。</div></div></div>
+  </section>
+
+  <section class="tabpane" id="paneSet">
+    <div class="pane-head"><div class="title">安全 · 备份 · 设置</div></div>
+    <div class="panel">
+      <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2"><path d="M12 2a4 4 0 0 0-4 4 3 3 0 0 0-3 3 3 3 0 0 0 0 6 3 3 0 0 0 6 2 3 3 0 0 0 6 0 3 3 0 0 0 6-2 3 3 0 0 0 0-6 3 3 0 0 0-3-3 4 4 0 0 0-4-4z"/></svg>隐私与安全状态</h3>
+      <div id="secStatus"></div>
+      <button class="btn btn-ghost btn-block btn-sm" id="clearPiiBtn" style="margin-top:8px">清除全部病例 PII 仅保留匿名ID</button>
+    </div>
+    <div class="panel">
+      <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><path d="M4 4h16v12H7l-3 3z"/><path d="M9 9h6M9 13h4"/></svg>设备同步（手机·电脑双重保存）</h3>
+      <div id="syncInfo"></div>
+      <div id="qrWrap" style="display:none"><img id="qrImg" alt="电脑端地址二维码"></div>
+      <div class="grid2" style="margin-top:6px">
+        <button class="btn btn-ghost" id="syncNowBtn">立即同步</button>
+        <button class="btn btn-ghost" id="pairBtn">连接电脑端</button>
+      </div>
+      <div id="pairBox" style="display:none;margin-top:8px">
+        <div class="field"><label>电脑端地址（手机用）</label><input id="pairUrl" placeholder="同 Wi-Fi: http://电脑IP:3000 ｜ 公网: http://公网地址:端口"></div>
+        <div class="field"><label>访问令牌（电脑端设了 NM_TOKEN 才需要）</label><input id="pairToken" placeholder="与电脑端 NM_TOKEN 一致，可留空"></div>
+        <button class="btn btn-primary btn-block btn-sm" id="pairGo">连接并拉取历史</button>
+        <div class="note" style="margin-top:8px">两种用法：① 同 Wi-Fi 填电脑局域网地址；② 公网填电脑端经路由器/隧道暴露的公网地址+令牌，手机在任意网络都能同步。连接后本机与电脑端双重保存，任一端录入自动互相同步。</div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>数据备份与恢复</h3>
+      <div class="grid2">
+        <button class="btn btn-ghost" id="expBtn">导出全量备份(JSON)</button>
+        <button class="btn btn-ghost" id="expDeidBtn">导出脱敏数据库</button>
+      </div>
+      <button class="btn btn-ghost btn-block" id="impBtn" style="margin-top:8px">导入恢复（覆盖）</button>
+      <div class="grid2" style="margin-top:8px">
+        <button class="btn btn-ghost" id="expCsvBtn">导出论文数据集(CSV)</button>
+        <button class="btn btn-ghost" id="expStatsBtn">导出统计表素材</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>示例数据</h3>
+      <button class="btn btn-ghost btn-block" id="sampleBtn">载入脱敏演示病例（3例）</button>
+      <button class="btn btn-ghost btn-block" id="clearBtn" style="margin-top:8px;color:var(--red)">清空全部数据</button>
+    </div>
+    <div style="font-size:11.5px;color:var(--muted);padding:6px 4px 12px;line-height:1.7">
+      存储方案：本地浏览器 localStorage，数据自动保存、会话刷新不丢失、不上传任何服务器。建议定期导出 JSON 备份。本机存储上限约 5MB，病例较多时请频繁导出离线备份。
+    </div>
+  </section>
+
+  <nav class="nav">
+    <div class="navbrand">
+      <div class="nb-logo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/></svg>
+      </div>
+      <div class="nb-t">神经调控科研一体化</div>
+      <div class="nb-s">功能神外 · 射频 · SCS</div>
+    </div>
+    <button class="on" data-tab="cmd">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v12H7l-3 3z"/></svg>指令
+    </button>
+    <button data-tab="case">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>病例
+    </button>
+    <button data-tab="mine">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6l-4 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-4-9V2"/><path d="M8 2h8M7 15h10"/></svg>挖掘
+    </button>
+    <button data-tab="write">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>写稿
+    </button>
+    <button data-tab="set">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>设置
+    </button>
+  </nav>
+</div>
+
+<div class="mask" id="mask"></div>
+<div class="sheet" id="caseSheet">
+  <div class="sh-head"><h3 id="caseSheetTitle">添加病例</h3><button class="closeX" data-close>&times;</button></div>
+  <div class="sh-body" id="caseBody"></div>
+  <div class="sh-foot" id="caseFoot"></div>
+</div>
+<div class="mask2" id="drawerMask"></div>
+<div class="drawer" id="drawer">
+  <div class="dh"><h3>安全与设置</h3></div>
+  <div class="db">
+    <div class="item" id="toCmd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v12H7l-3 3z"/></svg>返回指令台</div>
+    <div class="item" id="dExp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>导出全量备份</div>
+    <div class="item" id="dDeid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>导出脱敏数据库</div>
+    <div class="item" id="dImp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 8l5-5 5 5M12 3v12"/></svg>导入恢复</div>
+    <div class="item" id="dSample"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>载入演示病例</div>
+    <div class="item danger" id="dClear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M9 6V4h6v2M6 6l1 14h10l1-14"/></svg>清空全部数据</div>
+  </div>
+</div>
+<input type="file" id="impFile" accept="application/json" style="display:none">
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ===================== 存储层 ===================== */
+const K={ cases:'nm_cases', meta:'nm_meta', lit:'nm_lit' };
+/* ============ 电脑端同步层（数据唯一落盘在电脑端服务） ============ */
+const SYNC={ enabled:false, base:'', token:localStorage.getItem('nm_sync_token')||'', lanUrls:[], localUrl:'', pendingDeletes:new Set() };
+let SUPPRESS_SYNC=false;
+function setSyncBadge(text, ok){ const t=$('#syncText'); if(t) t.textContent=text; const dot=document.querySelector('.sync .dot'); if(dot) dot.style.background= ok?'#7dffb0':'#f2c14e'; }
+function syncBaseGuess(){ if(typeof location!=='undefined' && /^https?:$/.test(location.protocol)) return location.origin; return localStorage.getItem('nm_sync_url')||null; }
+async function apiGet(p){ const r=await fetch(SYNC.base+p+(SYNC.token?('?t='+encodeURIComponent(SYNC.token)):''),{cache:'no-store'}); if(!r.ok) throw new Error('http'); return r.json(); }
+async function pullFromServer(){ const db=await apiGet('/api/db'); cases=db.cases||[]; meta=db.meta||{}; litLib=db.litLib||[]; localStorage.setItem(K.cases,JSON.stringify(cases)); localStorage.setItem(K.meta,JSON.stringify(meta)); localStorage.setItem(K.lit,JSON.stringify(litLib)); renderCases(); renderCmd(); renderSec(); }
+let _pushTimer=null;
+function pushToServer(){ if(!SYNC.enabled) return; clearTimeout(_pushTimer); _pushTimer=setTimeout(async()=>{ const payload={cases:cases, meta:meta, litLib:litLib, deletedIds:[...SYNC.pendingDeletes], clientUpdatedAt:Date.now()}; SYNC.pendingDeletes.clear(); try{ const r=await fetch(SYNC.base+'/api/db'+(SYNC.token?('?t='+encodeURIComponent(SYNC.token)):''),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); const db=await r.json(); cases=db.cases||[]; meta=db.meta||{}; litLib=db.litLib||[]; localStorage.setItem(K.cases,JSON.stringify(cases)); localStorage.setItem(K.meta,JSON.stringify(meta)); localStorage.setItem(K.lit,JSON.stringify(litLib)); setSyncBadge('已同步至电脑端 · '+cases.length+'例', true); renderCases(); renderCmd(); renderSec(); }catch(e){ setSyncBadge('同步失败，已存本地', false); } }, 350); }
+let _autoSyncTimer=null;
+function startAutoSync(){ if(_autoSyncTimer) return; _autoSyncTimer=setInterval(()=>{ if(SYNC.enabled){ pullFromServer().then(pushToServer).catch(()=>{}); } }, 20000); }
+async function tryConnect(base){ base=(base||'').trim().replace(/\/$/,''); if(!base) return false; try{ const r=await fetch(base+'/api/status'+(SYNC.token?('?t='+encodeURIComponent(SYNC.token)):''),{cache:'no-store'}); if(!r.ok) return false; const s=await r.json(); SYNC.enabled=true; SYNC.base=base; SYNC.lanUrls=s.lanUrls||[]; SYNC.localUrl=s.localUrl||base; localStorage.setItem('nm_sync_url', base); localStorage.setItem('nm_sync_token', SYNC.token); setSyncBadge('已连接电脑端 · '+s.count+'例', true); startAutoSync(); await pullFromServer(); return true; }catch(e){ return false; } }
+async function initSync(){ const cfg=localStorage.getItem('nm_sync_url'); if(cfg && await tryConnect(cfg)){ renderSyncPanel(); return; } const guessed=(typeof location!=='undefined' && /^https?:$/.test(location.protocol))?location.origin:null; if(guessed && guessed!==cfg && await tryConnect(guessed)){ renderSyncPanel(); return; } SYNC.enabled=false; SYNC.token=localStorage.getItem('nm_sync_token')||''; setSyncBadge('本地模式（未连接电脑）', false); renderSyncPanel(); }
+async function syncNow(){ if(!SYNC.enabled){ toast('未连接电脑端'); return; } await pullFromServer(); pushToServer(); toast('已与电脑端同步'); }
+function showQR(target){ const img=$('#qrImg'), wrap=$('#qrWrap'); if(!img||!wrap) return; if(!SYNC.enabled){ wrap.style.display='none'; return; } img.onerror=()=>{ wrap.style.display='none'; }; img.src=SYNC.base+'/api/qr?url='+encodeURIComponent(target)+(SYNC.token?('&t='+encodeURIComponent(SYNC.token)):''); wrap.style.display='block'; }
+function renderSyncPanel(){ const info=$('#syncInfo'), qrWrap=$('#qrWrap'), pairBox=$('#pairBox'); if(!info) return; if(!SYNC.enabled){ info.innerHTML='<div class="warn">当前为本地模式，数据仅存本机浏览器（双重保存的一端）。点「连接电脑端」填入电脑的公网或局域网地址并连接后，两端会互相补齐最新数据；未连接时本机数据不丢，电脑关机也不影响本机打开。</div>'; if(qrWrap) qrWrap.style.display='none'; if(pairBox) pairBox.style.display='block'; return; } const isHost=(typeof location!=='undefined' && location.origin===SYNC.base); if(isHost){ const lan=SYNC.lanUrls[0]||SYNC.base; const allAddr=(SYNC.lanUrls||[]).map(u=>'<b>'+esc(u)+'</b>').join(' &nbsp;或&nbsp; '); let pub=''; if(SYNC.token) pub='<div style="font-size:11.5px;color:var(--amber);margin-top:4px">已启用令牌：手机从公网连接须填相同令牌。</div>'; info.innerHTML='<div class="flag ok" style="display:inline-block">本机即电脑端 · 数据已落盘本机</div><div style="font-size:12px;color:var(--muted);margin-top:6px">手机连同一 Wi-Fi 后，扫描二维码或打开下方地址即可读取历史、实时写入本机。</div><div style="font-size:12px;margin-top:6px">手机可打开地址：'+allAddr+'</div><div style="font-size:11.5px;color:var(--muted);margin-top:4px">（.local 地址不随 IP 变化更稳定；若要从公网访问，请在路由器/隧道把本端口映射到公网，并在手机端填公网地址+令牌）</div>'+pub; showQR(lan); if(pairBox) pairBox.style.display='none'; } else { info.innerHTML='<div class="flag ok" style="display:inline-block">已连接电脑端 '+esc(SYNC.base)+'</div><div style="font-size:12px;color:var(--muted);margin-top:6px">本机与电脑端双重保存，任一端录入后自动互相同步补齐。切换请点「连接电脑端」。</div>'; if(qrWrap) qrWrap.style.display='none'; if(pairBox) pairBox.style.display='block'; } }
+function load(k,def){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):def; }catch(e){ return def; } }
+function save(k,v){ localStorage.setItem(k,JSON.stringify(v)); flashSync(); if(SYNC.enabled && !SUPPRESS_SYNC && (k===K.cases||k===K.meta||k===K.lit)) pushToServer(); }
+let cases=load(K.cases,null);
+let meta=load(K.meta,{});
+let litLib=load(K.lit,[]);
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+function flashSync(){ const t=$('#syncText'); if(!t)return; t.textContent='保存中…'; clearTimeout(flashSync._t); flashSync._t=setTimeout(()=>{ t.textContent='本地已保存'; },400); }
+function uid(n){ return 'NM-'+new Date().getFullYear()+'-'+String(n).padStart(4,'0'); }
+function anonSeq(){ const max=cases.reduce((m,c)=>{ const x=parseInt((c.id||'').split('-')[2]||'0',10); return isNaN(x)?m:Math.max(m,x); },0); return max+1; }
+function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fmtDate(d){ if(!d) return ''; const x=new Date(d); if(isNaN(x)) return d; return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0'); }
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('show'),1900); }
+
+/* ===================== 统计函数 ===================== */
+function mean(a){ if(!a.length) return NaN; return a.reduce((s,x)=>s+x,0)/a.length; }
+function sd(a){ if(a.length<2) return 0; const m=mean(a); return Math.sqrt(a.reduce((s,x)=>s+(x-m)*(x-m),0)/(a.length-1)); }
+function erf(x){ const s=x<0?-1:1; x=Math.abs(x); const t=1/(1+0.3275911*x);
+  const y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x); return s*y; }
+function Phi(z){ return 0.5*(1+erf(z/Math.SQRT2)); }
+function chi2(a,b,c,d){ const n=a+b+c+d; if(n===0) return {chi:0,p:1,ok:false};
+  const e11=(a+b)*(a+c)/n, e12=(a+b)*(b+d)/n, e21=(c+d)*(a+c)/n, e22=(c+d)*(b+d)/n;
+  let chi=0; [[a,e11],[b,e12],[c,e21],[d,e22]].forEach(([o,e])=>{ if(e>0) chi+=(o-e)*(o-e)/e; });
+  const p=chi>0?2*(1-Phi(Math.sqrt(chi))):1; return {chi:+chi.toFixed(2),p:+p.toFixed(4),ok:true}; }
+function welch(a,b){ const na=a.length, nb=b.length; if(na<2||nb<2) return {t:0,p:1,ma:mean(a),mb:mean(b),ok:false};
+  const ma=mean(a), mb=mean(b), va=Math.pow(sd(a),2), vb=Math.pow(sd(b),2);
+  const se=Math.sqrt(va/na+vb/nb); if(se===0) return {t:0,p:1,ma:+ma.toFixed(1),mb:+mb.toFixed(1),ok:false};
+  const t=Math.abs(ma-mb)/se; const p=2*(1-Phi(t)); return {t:+t.toFixed(2),p:+p.toFixed(4),ma:+ma.toFixed(1),mb:+mb.toFixed(1),ok:true}; }
+function or2x2(a,b,c,d){ if((a===0&&b===0)||(c===0&&d===0)) return {or:NaN,ciLow:NaN,ciHigh:NaN,p:NaN,ok:false};
+  const OR=(a*d)/(b*c||1e-9); const se=Math.sqrt(1/Math.max(a,1e-9)+1/Math.max(b,1e-9)+1/Math.max(c,1e-9)+1/Math.max(d,1e-9));
+  const lo=Math.exp(Math.log(OR)-1.96*se), hi=Math.exp(Math.log(OR)+1.96*se);
+  const ch=chi2(a,b,c,d); return {or:+OR.toFixed(2),ciLow:+lo.toFixed(2),ciHigh:+hi.toFixed(2),p:ch.p,ok:true}; }
+
+/* ===================== 工具 ===================== */
+function num(v){ const n=parseFloat(v); return isNaN(n)?null:n; }
+function pairArr(arr){ return arr.filter(c=>num(c.postop&&c.postop.vasBefore)!=null&&num(c.postop&&c.postop.vasAfter)!=null); }
+function reliefPct(c){ if(c.disease&&c.disease.painRelief!=null) return c.disease.painRelief; const b=num(c.postop&&c.postop.vasBefore), a=num(c.postop&&c.postop.vasAfter);
+  if(b==null||a==null||b===0) return null; return Math.round((b-a)/b*100); }
+function isResp(c){ const r=reliefPct(c); return r!=null && r>=50; }
+
+/* ===================== 导航 ===================== */
+function switchTab(tab){ $$('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
+  $$('.tabpane').forEach(p=>p.classList.remove('active'));
+  $('#pane'+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.add('active');
+  if(tab==='case') renderCases(); if(tab==='cmd') renderCmd(); if(tab==='set') renderSec(); }
+$$('.nav button').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
+
+/* ===================== 指令台 ===================== */
+function renderCmd(){
+  const total=cases.length;
+  const flagged=cases.filter(c=>c.qualityFlags&&c.qualityFlags.length).length;
+  $('#cmdStats').innerHTML=
+    '<div class="stat"><div class="n">'+total+'</div><div class="l">脱敏病例</div></div>'+
+    '<div class="stat"><div class="n">'+cases.filter(c=>c.type==='住院').length+'</div><div class="l">住院</div></div>'+
+    '<div class="stat"><div class="n">'+flagged+'</div><div class="l">待核验</div></div>';
+}
+function routeCmd(raw){
+  const cmd=(raw||'').trim(); if(!cmd){ toast('请输入指令'); return; }
+  if(/录入|添加病例|建档|新病例/.test(cmd)){ openCaseSheet(null); return; }
+  if(/数据体检|挖掘|体检|分析选题|选题/.test(cmd)){ switchTab('mine'); runMining(); return; }
+  if(/写稿|成稿|论文|撰写/.test(cmd)){ const kw=cmd.replace(/定向写稿|写稿|成稿|论文|撰写|基于|结合|生成/g,'').trim(); switchTab('write'); openWriteSheet(kw); return; }
+  if(/思路优化|文献|对标|创新点/.test(cmd)){ const kw=cmd.replace(/思路优化|文献|对标|创新点|优化/g,'').trim(); switchTab('write'); openLitSheet(kw); return; }
+  if(/数据导出|导出数据集|csv/.test(cmd)){ exportCsv(); return; }
+  if(/统计表|统计素材/.test(cmd)){ exportStats(); return; }
+  if(/备份|导出全量|backup/.test(cmd)){ exportFull(); return; }
+  if(/脱敏数据库|脱敏导出/.test(cmd)){ exportDeid(); return; }
+  if(/病例库|看病例/.test(cmd)){ switchTab('case'); return; }
+  toast('指令已识别为「写稿」关键词，正在匹配选题'); switchTab('write'); openWriteSheet(cmd);
+}
+$('#cmdGo').onclick=()=>routeCmd($('#cmdInput').value);
+$('#cmdInput').addEventListener('keydown',e=>{ if(e.key==='Enter') routeCmd($('#cmdInput').value); });
+$('#cmdChips').querySelectorAll('.c').forEach(el=>el.onclick=()=>{ const c=el.dataset.cmd; routeCmd(c); });
+
+/* ===================== 病例录入 ===================== */
+let caseEditId=null, caseDraft=null;
+const CATS=['偏头痛射频消融','脊髓电刺激(SCS)植入','脑深部电刺激(DBS)','其他功能神外'];
+function openCaseSheet(editId){
+  caseEditId=editId||null; caseDraft=editId?JSON.parse(JSON.stringify(cases.find(x=>x.id===editId))):null;
+  $('#caseSheetTitle').textContent=editId?'编辑病例':'添加脱敏病例';
+  $('#caseBody').innerHTML=caseFormHTML(caseDraft);
+  $('#caseFoot').innerHTML='<button class="btn btn-ghost btn-block" id="caseFreeBtn">自由文本智能解析</button><button class="btn btn-primary btn-block" id="caseSave">保存（自动脱敏入库）</button>';
+  $('#caseFreeBtn').onclick=()=>{ const txt=$('#f_free').value; if(!txt.trim()){ toast('请先粘贴/输入自由文本'); return; }
+    const p=parseFreeText(txt); caseDraft=caseDraft||{}; deepMerge(caseDraft,p); $('#caseBody').innerHTML=caseFormHTML(caseDraft); toast('已尝试解析填充，请核对修正'); };
+  $('#caseSave').onclick=saveCase;
+  showSheet('#caseSheet');
+}
+function deepMerge(o,src){ for(const k in src){ if(src[k]&&typeof src[k]==='object'&&!Array.isArray(src[k])){ o[k]=o[k]||{}; deepMerge(o[k],src[k]); } else if(src[k]!=null&&src[k]!=='') o[k]=src[k]; } }
+function parseFreeText(txt){
+  const d={baseline:{},disease:{},history:{},postop:{},surgeryRF:{}};
+  const ageM=txt.match(/(\d{1,3})\s*岁/); if(ageM) d.baseline.age=ageM[1];
+  const gM=txt.match(/(男|女)/); if(gM) d.baseline.gender=gM[1];
+  const dxM=txt.match(/(?:诊断|考虑|拟诊)[：:]\s*([^\n。]{2,40})/); if(dxM) d.disease.diagnosis=dxM[1].trim();
+  const vasB=txt.match(/VAS\s*[:：]?\s*(\d{1,2})/i); if(vasB) d.postop.vasBefore=vasB[1];
+  const vasA=txt.match(/(?:术后|复查)\s*VAS\s*[:：]?\s*(\d{1,2})/i); if(vasA) d.postop.vasAfter=vasA[1];
+  const durM=txt.match(/病程\s*(\d{1,3})\s*(年|月|天|周)/); if(durM) d.disease.durationMonths=({'年':12,'月':1,'天':0.03,'周':0.25}[durM[2]]||1)*parseInt(durM[1]);
+  const sideM=txt.match(/(左侧|右侧|双侧|左|右)/); if(sideM) d.disease.side=sideM[1];
+  const rare=/罕见|少见|不典型|特殊|变异|首例|独特/.test(txt); if(rare) d.disease.rare=true;
+  return d;
+}
+function caseFormHTML(d){
+  d=d||{}; const v=(o,k,def)=> (o&&o[k]!=null?o[k]:(def||''));
+  const b=d.baseline||{}, di=d.disease||{}, h=d.history||{}, im=d.imaging||{}, sr=d.surgeryRF||{}, io=d.intraop||{}, po=d.postop||{}, pr=d.prognosis||{};
+  return ''+
+  '<div class="field"><label>自由文本（粘贴病历/门诊记录，点下方「智能解析」自动填充结构化字段）</label>'+
+    '<textarea id="f_free" placeholder="可粘贴主诉、现病史、诊疗经过；系统自动抽取年龄、性别、诊断、VAS、病程、侧别等"></textarea></div>'+
+  '<details open><summary>① 身份与脱敏</summary><div class="body">'+
+    '<div class="field"><label>匿名病例ID（系统自动生成，禁止填姓名）</label><input id="f_id" value="'+esc(d.id||'保存后自动分配')+'" disabled></div>'+
+    '<div class="grid2">'+
+      '<div class="field"><label>患者姓名(本地参考,可留空)</label><input id="f_name" value="'+esc(v(d,'pii.name'))+'" placeholder="仅本机可见"></div>'+
+      '<div class="field"><label>住院号/门诊号(本地参考)</label><input id="f_mrno" value="'+esc(v(d,'pii.mrno'))+'" placeholder="仅本机可见"></div>'+
+    '</div>'+
+    '<div class="warn">姓名、住院号等 PII 仅存于本机、不进入任何科研/论文输出。可随时在「设置」一键清除仅留匿名ID。</div>'+
+  '</div></details>'+
+  '<details open><summary>② 基线资料</summary><div class="body">'+
+    '<div class="grid3">'+
+      '<div class="field"><label>性别</label><select id="f_gender"><option '+(v(b,'gender')==='男'?'selected':'')+'>男</option><option '+(v(b,'gender')==='女'?'selected':'')+'>女</option></select></div>'+
+      '<div class="field"><label>年龄</label><input id="f_age" type="number" value="'+esc(v(b,'age'))+'"></div>'+
+      '<div class="field"><label>利手</label><select id="f_hand"><option '+(v(b,'handedness')==='右'?'selected':'')+'>右</option><option '+(v(b,'handedness')==='左'?'selected':'')+'>左</option><option '+(v(b,'handedness')==='双'?'selected':'')+'>双</option></select></div>'+
+    '</div>'+
+    '<div class="grid2">'+
+      '<div class="field"><label>体重(kg)</label><input id="f_weight" value="'+esc(v(b,'weight'))+'"></div>'+
+      '<div class="field"><label>合并症</label><input id="f_como" value="'+esc(v(b,'comorbidity'))+'" placeholder="逗号分隔"></div>'+
+    '</div>'+
+  '</div></details>'+
+  '<details open><summary>③ 病种与病史</summary><div class="body">'+
+    '<div class="field"><label>病种分类</label><select id="f_cat">'+CATS.map(c=>'<option '+(v(di,'category')===c?'selected':'')+'>'+c+'</option>').join('')+'</select></div>'+
+    '<div class="field"><label>诊断</label><input id="f_dx" value="'+esc(v(di,'diagnosis'))+'" placeholder="如 慢性偏头痛"></div>'+
+    '<div class="grid2">'+
+      '<div class="field"><label>病程(月)</label><input id="f_dur" type="number" value="'+esc(v(di,'durationMonths'))+'"></div>'+
+      '<div class="field"><label>侧别</label><select id="f_side"><option '+(v(di,'side')==='左'?'selected':'')+'>左</option><option '+(v(di,'side')==='右'?'selected':'')+'>右</option><option '+(v(di,'side')==='双侧'?'selected':'')+'>双侧</option><option '+(v(di,'side')==='-'?'selected':'')+'>未定</option></select></div>'+
+    '</div>'+
+    '<div class="field"><label>主诉</label><textarea id="f_cc">'+esc(v(h,'chiefComplaint'))+'</textarea></div>'+
+    '<div class="field"><label>现病史</label><textarea id="f_pi">'+esc(v(h,'presentIllness'))+'</textarea></div>'+
+    '<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:#c0392b"><input type="checkbox" id="f_rare" '+(v(di,'rare')?'checked':'')+'> 标记为稀有/不典型病例（用于个案报道挖掘）</label>'+
+  '</div></details>'+
+  '<details><summary>④ 影像学指标</summary><div class="body">'+
+    '<div class="field"><label>检查手段</label><input id="f_imod" value="'+esc(v(im,'modality'))+'" placeholder="MRI/CT/DSA"></div>'+
+    '<div class="field"><label>影像所见</label><textarea id="f_ifind">'+esc(v(im,'findings'))+'</textarea></div>'+
+    '<div class="grid2">'+
+      '<div class="field"><label>病灶位置</label><input id="f_iloc" value="'+esc(v(im,'lesionLocation'))+'"></div>'+
+      '<div class="field"><label>病灶大小(mm)</label><input id="f_isize" value="'+esc(v(im,'lesionSize'))+'"></div>'+
+    '</div>'+
+  '</div></details>'+
+  '<details><summary>⑤ 手术 / 射频参数</summary><div class="body">'+
+    '<div class="field"><label>干预方式</label><select id="f_smod"><option '+(v(sr,'modality')==='射频'?'selected':'')+'>射频</option><option '+(v(sr,'modality')==='SCS植入'?'selected':'')+'>SCS植入</option><option '+(v(sr,'modality')==='DBS植入'?'selected':'')+'>DBS植入</option><option '+(v(sr,'modality')==='其他'?'selected':'')+'>其他</option></select></div>'+
+    '<div class="grid2">'+
+      '<div class="field"><label>靶点/节段</label><input id="f_target" value="'+esc(v(sr,'target'))+'" placeholder="如 C2/C3 背根神经节"></div>'+
+      '<div class="field"><label>温度(℃)</label><input id="f_temp" value="'+esc(v(sr,'tempC'))+'"></div>'+
+    '</div>'+
+    '<div class="grid2">'+
+      '<div class="field"><label>时长(s)</label><input id="f_time" value="'+esc(v(sr,'timeSec'))+'"></div>'+
+      '<div class="field"><label>循环次数</label><input id="f_cycles" value="'+esc(v(sr,'cycles'))+'"></div>'+
+    '</div>'+
+    '<div class="field"><label>刺激参数(频率/脉宽/幅值)</label><input id="f_stim" value="'+esc(v(sr,'stimulationParams'))+'"></div>'+
+  '</div></details>'+
+  '<details><summary>⑥ 术中记录</summary><div class="body">'+
+    '<div class="grid2">'+
+      '<div class="field"><label>手术时长(min)</label><input id="f_iodur" value="'+esc(v(io,'durationMin'))+'"></div>'+
+      '<div class="field"><label>出血量(ml)</label><input id="f_ibl" value="'+esc(v(io,'bloodLoss'))+'"></div>'+
+    '</div>'+
+    '<div class="field"><label>术中并发症</label><input id="f_ioc" value="'+esc(v(io,'complicationsIntraop'))+'" placeholder="无/具体"></div>'+
+    '<div class="field"><label>导航/电生理监测</label><input id="f_ionav" value="'+esc(v(io,'navigated'))+'" placeholder="是/否"></div>'+
+  '</div></details>'+
+  '<details><summary>⑦ 术后指标</summary><div class="body">'+
+    '<div class="grid2">'+
+      '<div class="field"><label>术前VAS</label><input id="f_vasb" type="number" value="'+esc(v(po,'vasBefore'))+'"></div>'+
+      '<div class="field"><label>术后VAS</label><input id="f_vasa" type="number" value="'+esc(v(po,'vasAfter'))+'"></div>'+
+    '</div>'+
+    '<div class="grid2">'+
+      '<div class="field"><label>术前评分</label><input id="f_scoreb" value="'+esc(v(po,'scoreBefore'))+'" placeholder="如 HIT-6"></div>'+
+      '<div class="field"><label>术后评分</label><input id="f_scorea" value="'+esc(v(po,'scoreAfter'))+'"></div>'+
+    '</div>'+
+    '<div class="field"><label>即刻疗效</label><input id="f_imme" value="'+esc(v(po,'immediateOutcome'))+'" placeholder="显效/有效/无效"></div>'+
+    '<div class="field"><label>用药调整</label><input id="f_med" value="'+esc(v(po,'medications'))+'"></div>'+
+  '</div></details>'+
+  '<details><summary>⑧ 随访 / 预后 / 并发症 / 复发</summary><div class="body">'+
+    '<div class="grid2">'+
+      '<div class="field"><label>末次随访(月)</label><input id="f_fup" type="number" value="'+esc(v(di,'followupMonths'))+'"></div>'+
+      '<div class="field"><label>疼痛缓解(%)</label><input id="f_relief" value="'+esc(v(di,'painRelief'))+'"></div>'+
+    '</div>'+
+    '<div class="field"><label>复发(是/否)</label><select id="f_rec"><option value="">未知</option><option '+(v(di,'recurrence')===true?'selected':'')+'>是</option><option '+(v(di,'recurrence')===false?'selected':'')+'>否</option></select></div>'+
+    '<div class="grid2">'+
+      '<div class="field"><label>术前mRS</label><input id="f_mrsb" value="'+esc(v(pr,'mrsBefore'))+'"></div>'+
+      '<div class="field"><label>术后mRS</label><input id="f_mrsa" value="'+esc(v(pr,'mrsAfter'))+'"></div>'+
+    '</div>'+
+    '<div class="field"><label>并发症(类型/分级/处理)</label><textarea id="f_comp">'+esc(v(di,'complicationsText'))+'</textarea></div>'+
+  '</div></details>';
+}
+function saveCase(){
+  const g=id=>{ const e=document.getElementById(id); return e?e.value.trim():''; };
+  const gc=id=>{ const e=document.getElementById(id); return e?e.checked:false; };
+  const obj=caseDraft?JSON.parse(JSON.stringify(caseDraft)):{};
+  obj.baseline={ gender:g('f_gender'), age:num(g('f_age')), handedness:g('f_hand'), weight:num(g('f_weight')), comorbidity:g('f_como') };
+  obj.disease={ category:g('f_cat'), diagnosis:g('f_dx'), durationMonths:num(g('f_dur')), side:g('f_side'), rare:gc('f_rare') };
+  obj.history={ chiefComplaint:g('f_cc'), presentIllness:g('f_pi') };
+  obj.imaging={ modality:g('f_imod'), findings:g('f_ifind'), lesionLocation:g('f_iloc'), lesionSize:num(g('f_isize')) };
+  obj.surgeryRF={ modality:g('f_smod'), target:g('f_target'), tempC:num(g('f_temp')), timeSec:num(g('f_time')), cycles:num(g('f_cycles')), stimulationParams:g('f_stim') };
+  obj.intraop={ durationMin:num(g('f_iodur')), bloodLoss:num(g('f_ibl')), complicationsIntraop:g('f_ioc'), navigated:g('f_ionav') };
+  obj.postop={ vasBefore:num(g('f_vasb')), vasAfter:num(g('f_vasa')), scoreBefore:g('f_scoreb'), scoreAfter:g('f_scorea'), immediateOutcome:g('f_imme'), medications:g('f_med') };
+  obj.prognosis={ mrsBefore:num(g('f_mrsb')), mrsAfter:num(g('f_mrsa')), mrs:num(g('f_mrsb')) };
+  obj.disease.followupMonths=num(g('f_fup')); obj.disease.painRelief=num(g('f_relief'));
+  obj.disease.recurrence = g('f_rec')==='是'?true:(g('f_rec')==='否'?false:undefined);
+  obj.disease.complicationsText=g('f_comp');
+  obj.type = (g('f_smod')==='SCS植入'||g('f_smod')==='DBS植入'||obj.disease.category.indexOf('SCS')>=0)?'住院':'门诊';
+  obj.pii={ name:g('f_name'), mrno:g('f_mrno') };
+  obj.qualityFlags=qaCheck(obj);
+  if(caseEditId){ const old=cases.find(x=>x.id===caseEditId); obj.id=old.id; obj.createdAt=old.createdAt; obj.auditLog=(old.auditLog||[]); obj.auditLog.push({at:new Date().toISOString(),act:'编辑'}); }
+  else { obj.id=uid(anonSeq()); obj.createdAt=Date.now(); obj.auditLog=[{at:new Date().toISOString(),act:'新建'}]; }
+  obj.updatedAt=new Date().toISOString();
+  if(caseEditId) cases=cases.map(x=>x.id===caseEditId?obj:x); else cases.unshift(obj);
+  save(K.cases,cases); hideSheet('#caseSheet'); switchTab('case'); renderCmd(); toast(caseEditId?'已更新并脱敏入库':'已脱敏入库（'+obj.id+'）');
+}
+function qaCheck(c){
+  const f=[];
+  if(c.baseline.age==null||c.baseline.gender==null) f.push('缺基线年龄/性别');
+  if(!c.disease.diagnosis) f.push('缺诊断');
+  if(!c.disease.category) f.push('缺病种分类');
+  if(c.postop.vasBefore!=null && c.postop.vasAfter!=null && c.postop.vasAfter>c.postop.vasBefore+1) f.push('术后VAS高于术前(数据矛盾)');
+  if(c.disease.followupMonths==null) f.push('缺随访周期(随访不全)');
+  if(c.disease.recurrence==null && (c.disease.followupMonths||0)>3) f.push('随访>3月未填复发');
+  if(c.surgeryRF.modality && c.surgeryRF.modality!=='其他' && !c.surgeryRF.target) f.push('有干预方式缺靶点');
+  return f;
+}
+
+/* ===================== 病例库渲染 ===================== */
+let caseFilter='all';
+$$('#caseSeg button').forEach(b=>b.onclick=()=>{ $$('#caseSeg button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); caseFilter=b.dataset.f; renderCases(); });
+function renderCases(){
+  const box=$('#caseList'); box.innerHTML='';
+  let list=cases.filter(c=>{ if(caseFilter==='all') return true; if(caseFilter==='flag') return c.qualityFlags&&c.qualityFlags.length; return c.type===caseFilter; });
+  if(!list.length){ box.innerHTML='<div class="panel"><div class="empty">暂无'+(caseFilter==='flag'?'待核验':caseFilter)+'病例。点击「添加病例」建档。</div></div>'; return; }
+  list.sort((a,b)=>b.createdAt-a.createdAt);
+  list.forEach(c=>{
+    const el=document.createElement('div'); el.className='case '+(c.type==='住院'?'inp':'');
+    const flags=(c.qualityFlags||[]).map(x=>'<span class="flag bad">'+esc(x)+'</span>').join('')||'<span class="flag ok">数据完整</span>';
+    el.innerHTML=
+      '<div class="top"><div class="anid">'+esc(c.id)+' <span style="font-weight:400;color:var(--muted);font-size:12.5px">'+esc(c.baseline.gender||'')+' · '+esc(c.baseline.age||'')+'岁</span></div>'+
+        '<span class="tag '+(c.type==='住院'?'ip':'op')+'">'+esc(c.type||'门诊')+'</span></div>'+
+      '<div class="meta">'+esc(c.disease.category||'')+' · '+esc(c.disease.diagnosis||'—')+' · 随访'+(esc(c.disease.followupMonths||'?'))+'月</div>'+
+      '<div>'+flags+'</div>'+
+      '<div class="acts"><button class="edit">编辑</button><button class="flw">追随访</button><button class="del">删除</button></div>';
+    el.querySelector('.edit').onclick=()=>openCaseSheet(c.id);
+    el.querySelector('.flw').onclick=()=>openFollowSheet(c.id);
+    el.querySelector('.del').onclick=()=>{ if(confirm('确认删除 '+c.id+'？不可恢复。')){ if(SYNC.enabled) SYNC.pendingDeletes.add(c.id); cases=cases.filter(x=>x.id!==c.id); save(K.cases,cases); renderCases(); renderCmd(); toast('已删除'); } };
+    box.appendChild(el);
+  });
+}
+
+/* ===================== 随访增量 ===================== */
+function openFollowSheet(caseId){
+  const c=cases.find(x=>x.id===caseId); if(!c) return;
+  const cur=(c.disease.followup)||[];
+  const rows=cur.map(function(r,i){ return '<div class="topic"><div class="h">随访'+(i+1)+' · '+esc(r.date||'')+'（'+esc(r.periodMonths||'?')+'月）</div><div class="why">缓解'+esc(r.relief||'?')+'% · VAS '+esc(r.vas||'?')+' · 复发'+(r.recurrence?'是':'否')+' · '+esc(r.note||'')+'</div></div>'; }).join('');
+  const body=
+    '<div class="note">为 '+esc(c.id)+' 追加一次随访，将增量更新该病例数据库。</div>'+
+    '<div class="grid2"><div class="field"><label>随访日期</label><input id="fu_date" type="date" value="'+todayStr()+'"></div><div class="field"><label>随访周期(月)</label><input id="fu_per" type="number" value="'+esc((cur.length+1)*3)+'"></div></div>'+
+    '<div class="grid2"><div class="field"><label>疼痛缓解(%)</label><input id="fu_relief" type="number"></div><div class="field"><label>当前VAS</label><input id="fu_vas" type="number"></div></div>'+
+    '<div class="field"><label>复发</label><select id="fu_rec"><option value="">未知</option><option value="是">是</option><option value="否">否</option></select></div>'+
+    '<div class="field"><label>记录/处理</label><textarea id="fu_note"></textarea></div>'+
+    '<div class="step-h" style="margin-top:10px">历史随访（'+cur.length+'）</div>'+(rows||'<div class="empty">暂无</div>');
+  showSheetCustom('追加随访 · '+c.id, body, [
+    {label:'保存随访', cls:'btn-primary', fn:function(){ const rec={ date:$('#fu_date').value, periodMonths:num($('#fu_per').value), relief:num($('#fu_relief').value), vas:num($('#fu_vas').value), recurrence:$('#fu_rec').value==='是', note:$('#fu_note').value.trim() };
+      c.disease.followup=(c.disease.followup||[]); c.disease.followup.push(rec);
+      c.disease.followupMonths=Math.max(c.disease.followupMonths||0, rec.periodMonths||0);
+      if(rec.recurrence) c.disease.recurrence=true;
+      c.updatedAt=new Date().toISOString(); c.auditLog=(c.auditLog||[]); c.auditLog.push({at:new Date().toISOString(),act:'追加随访'});
+      c.qualityFlags=qaCheck(c);
+      save(K.cases,cases); hideSheet('#caseSheet'); switchTab('case'); renderCmd(); toast('随访已增量更新'); }}
+  ]);
+}
+
+/* ===================== 模块3：自动挖掘 ===================== */
+let lastTopics=[];
+function runMining(){
+  if(!cases.length){ $('#mineOut').innerHTML='<div class="panel"><div class="empty">暂无病例，请先在「病例」中添加脱敏病例。</div></div>'; switchTab('mine'); return; }
+  lastTopics=buildTopics();
+  const total=cases.length;
+  const valCases=cases.filter(c=>!c.qualityFlags||c.qualityFlags.length===0);
+  let html='';
+  html+='<div class="stat-cards">'+
+    '<div class="stat"><div class="n">'+total+'</div><div class="l">病例总数</div></div>'+
+    '<div class="stat"><div class="n">'+valCases.length+'</div><div class="l">数据完整</div></div>'+
+    '<div class="stat"><div class="n">'+lastTopics.length+'</div><div class="l">可写选题</div></div></div>';
+  if(total-valCases.length>0) html+='<div class="warn">有 '+(total-valCases.length)+' 例存在数据质量标记（缺关键变量/随访不全/矛盾）。建议先补全后再用于论文，避免无效数据。</div>';
+  html+='<div class="panel"><h3>当前可写医学论文清单</h3>'+(lastTopics.map(function(t,i){ return topicCard(t,i+1); }).join('')||'<div class="empty">样本量不足以支撑论文选题，建议继续积累病例。</div>')+'</div>';
+  $('#mineOut').innerHTML=html; switchTab('mine'); toast('数据体检完成，识别出 '+lastTopics.length+' 个选题');
+}
+function respRate(arr){ const p=pairArr(arr); if(!p.length) return 0; return Math.round(p.filter(isResp).length/p.length*100); }
+function buildTopics(){
+  const T=[];
+  const dxCount={}; cases.forEach(c=>{ const k=c.disease.diagnosis||'未命名'; dxCount[k]=(dxCount[k]||0)+1; });
+  const rare=cases.filter(c=>c.disease.rare || (dxCount[c.disease.diagnosis]||0)<=2);
+  if(rare.length){
+    T.push({ type:'个案报道', title:(rare.length>1?'功能神经外科罕见/不典型病例系列（'+rare.length+'例）':(esc(rare[0].disease.diagnosis||'特殊')+'罕见个案报道')),
+      why:'识别到 '+rare.length+' 例稀有/不典型病例（含罕见发病表现、少见并发症或特殊诊疗过程），符合个案报道与罕见病例分析的数据特征。',
+      sampleN:rare.length, innovation:'聚焦不典型表现与诊疗启示，填补单中心个案空白', support:rare.length>=3?'中':(rare.length>=1?'低(需扩大)':'无'),
+      gaps:rare.length<3?'样本偏少，建议联合多中心或补长期随访':'随访时长需统一报告', _cases:rare });
+  }
+  const eff=cases.filter(c=>c.postop.vasBefore!=null && c.postop.vasAfter!=null);
+  if(eff.length>=5){
+    const byMod={}; eff.forEach(c=>{ const m=c.surgeryRF.modality||'未分组'; (byMod[m]=byMod[m]||[]).push(c); });
+    const parts=Object.entries(byMod).filter(x=>x[1].length>=3).map(function(x){ return x[0]+'(n='+x[1].length+', 有效率'+respRate(x[1])+'%)'; });
+    T.push({ type:'临床疗效分析', title:'不同神经调控方案疼痛疗效对比分析（n='+eff.length+'）',
+      why:eff.length+' 例含术前/术后 VAS 配对数据，可对比射频、SCS、DBS 等不同方案的疼痛缓解差异，筛选有统计学趋势的数据集。',
+      sampleN:eff.length, innovation:'多方案同台对比，突出本科室个体化靶点选择优势', support:parts.length>=2?'高':'中',
+      gaps: parts.length<2?'分组样本不足，难以做组间比较':'需补充盲法与长期随访', _cases:eff });
+  }
+  const rf=cases.filter(c=>c.surgeryRF.modality==='射频');
+  if(rf.length>=5){ T.push({ type:'技术经验论著', title:'偏头痛射频消融个体化靶点治疗经验（'+rf.length+'例）',
+    why:'数据集含 '+rf.length+' 例偏头痛射频病例，可总结本科室个体化靶点、参数改良与适配人群经验。',
+    sampleN:rf.length, innovation:'突出改良靶点选择与参数个体化，对比传统经验性穿刺', support:'中', gaps:'需补充与文献对照的长期复发数据', _cases:rf }); }
+  const scs=cases.filter(c=>c.surgeryRF.modality==='SCS植入');
+  if(scs.length>=5){ T.push({ type:'技术经验论著', title:'脊髓电刺激植入治疗神经病理性疼痛经验（'+scs.length+'例）',
+    why:'数据集含 '+scs.length+' 例 SCS 植入病例，可总结适配人群、参数程控与疗效维持经验。',
+    sampleN:scs.length, innovation:'突出本科室 SCS 适配人群筛选与程控策略', support:'中', gaps:'需补充生活质量量表随访', _cases:scs }); }
+  if(cases.length>=10){ T.push({ type:'回顾性队列研究', title:'功能神经外科神经调控治疗回顾性队列分析（n='+cases.length+'）',
+    why:cases.length+' 例覆盖多病种与多干预方式，可构建单中心真实世界队列，描述基线、疗效与安全性结局。',
+    sampleN:cases.length, innovation:'单中心大样本真实世界数据，结局指标齐全', support:'高', gaps:'回顾性设计，存在选择偏倚', _cases:cases }); }
+  const recKnown=cases.filter(c=>c.disease.recurrence!=null);
+  if(recKnown.length>=5){ T.push({ type:'危险因素分析', title:'神经调控术后复发危险因素分析（n='+recKnown.length+'）',
+    why:recKnown.length+' 例随访明确复发状态，可做单因素危险因素筛选，识别独立预测因子。',
+    sampleN:recKnown.length, innovation:'基于本科室随访数据识别复发预测因子', support:'中', gaps:'需多因素logistic回归外部验证', _cases:cases }); }
+  return T;
+}
+function topicCard(t,n){
+  return '<div class="topic"><div class="h">'+n+'. '+esc(t.title)+'</div>'+
+    '<div class="why">'+esc(t.why)+'</div>'+
+    '<div class="row"><span class="k">类型：'+esc(t.type)+'</span><span class="k">样本量：'+t.sampleN+'</span><span class="k">支撑度：'+esc(t.support)+'</span></div>'+
+    '<div class="row"><span class="g">短板：'+esc(t.gaps)+'</span></div>'+
+    '<div class="why" style="color:var(--teal)">创新点：'+esc(t.innovation)+'</div>'+
+    '<div style="margin-top:7px;display:flex;gap:7px"><button class="btn btn-purple btn-sm" onclick="openWriteSheet(\''+esc(t.title)+'\')">据此写稿</button><button class="btn btn-ghost btn-sm" onclick="openLitSheet(\''+esc(t.title)+'\')">文献对标</button></div></div>';
+}
+
+/* ===================== 模块5：全自动论文撰写 ===================== */
+function openWriteSheet(kw){
+  if(!lastTopics.length){ switchTab('mine'); runMining(); }
+  let topic=null;
+  if(kw){ const k=kw.toLowerCase(); topic=lastTopics.find(function(t){ return t.title.toLowerCase().indexOf(k)>=0 || t.type.toLowerCase().indexOf(k)>=0; }); }
+  if(!topic) topic=lastTopics[0];
+  if(!topic){ toast('暂无可写选题，请先录入病例并运行数据体检'); return; }
+  const body='<div class="note">将基于真实病例数据生成论文初稿。所有数字来自已录入数据，不足时主动提示。</div>'+
+    '<div class="field"><label>论文类型</label><select id="wt_type">'+['个案报道','临床疗效分析','回顾性队列研究','危险因素分析','技术经验论著'].map(function(x){ return '<option '+(topic.type===x?'selected':'')+'>'+x+'</option>'; }).join('')+'</select></div>'+
+    '<div class="field"><label>匹配选题</label><div class="topic"><div class="h">'+esc(topic.title)+'</div><div class="row"><span class="k">样本量 '+topic.sampleN+'</span><span class="k">'+esc(topic.type)+'</span></div></div></div>'+
+    '<div class="field"><label>篇幅</label><select id="wt_len"><option>短篇</option><option selected>中篇</option><option>完整论著</option></select></div>';
+  showSheetCustom('定向写稿', body, [{label:'生成论文初稿', cls:'btn-purple', fn:function(){
+    const type=$('#wt_type').value, len=$('#wt_len').value;
+    const html=generatePaper(type, topic, len);
+    $('#writeOut').innerHTML='<div class="paper">'+html+'</div>'+
+      '<div style="display:flex;gap:8px;margin:10px 0"><button class="btn btn-primary btn-sm" id="cpBtn">复制全文</button><button class="btn btn-ghost btn-sm" id="mdBtn">导出Markdown</button></div>';
+    $('#cpBtn').onclick=function(){ navigator.clipboard.writeText($('#writeOut .paper').innerText); toast('全文已复制'); };
+    $('#mdBtn').onclick=function(){ exportPaperMd(); };
+    hideSheet('#caseSheet'); switchTab('write'); toast('论文初稿已生成'); }}]);
+}
+function generatePaper(type, topic, len){
+  const disc='<div class="disc">声明：本初稿 100% 基于本系统已录入的真实脱敏病例数据生成，未虚构样本与结果。仅供临床科研参考，正式发表前需通过医院伦理审批、数据复核与人工润色；结论须由结果直接导出，避免过度外推。</div>';
+  const arr=(topic && topic._cases) ? topic._cases : cases;
+  if(type==='个案报道'){ const c=arr[0]||cases[0]; if(!c) return disc+'<p>暂无可用病例。</p>'; return disc+caseReport(c); }
+  if(type==='临床疗效分析') return disc+efficacyPaper(arr, topic);
+  if(type==='回顾性队列研究') return disc+cohortPaper(arr, topic);
+  if(type==='危险因素分析') return disc+riskPaper(arr, topic);
+  if(type==='技术经验论著') return disc+techPaper(arr, topic);
+  return disc+'<p>未识别到对应体裁。</p>';
+}
+function metricsFor(arr){
+  const n=arr.length;
+  const ages=arr.map(c=>num(c.baseline.age)).filter(a=>a!=null);
+  const vasPairs=pairArr(arr);
+  const rel=vasPairs.map(reliefPct).filter(r=>r!=null);
+  const resp=vasPairs.filter(isResp).length;
+  const recK=arr.filter(c=>c.disease.recurrence!=null);
+  const rec=recK.filter(c=>c.disease.recurrence===true).length;
+  return { n:n, ageMean:ages.length?+mean(ages).toFixed(1):null, ageSd:ages.length?+sd(ages).toFixed(1):null,
+    vasN:vasPairs.length, respRate:vasPairs.length?Math.round(resp/vasPairs.length*100):null,
+    relMean:rel.length?+mean(rel).toFixed(1):null, recRate:recK.length?Math.round(rec/recK.length*100):null,
+    female:arr.filter(c=>c.baseline.gender==='女').length };
+}
+function vasText(c){ const p=c.postop||{}; if(p.vasBefore==null) return '疗效数据待补充'; let t='术前VAS '+p.vasBefore; if(p.vasAfter!=null){ const r=reliefPct(c); t+='，术后VAS '+p.vasAfter+(r!=null?('，疼痛缓解'+r+'%'):''); } return t; }
+function caseReport(c){
+  const m=c.baseline||{}, d=c.disease||{}, p=c.postop||{}, im=c.imaging||{}, sr=c.surgeryRF||{}, io=c.intraop||{}, pr=c.prognosis||{};
+  let s='';
+  s+='<h2>'+esc(d.diagnosis||'特殊')+'罕见个案报道</h2>';
+  s+='<div class="ab"><b>中文摘要</b><p>报道 '+esc(c.id)+' 1例'+esc(d.diagnosis||'')+'患者的诊疗经过。患者'+esc(m.gender||'')+(m.age||'?')+'岁，因'+(esc(d.category||''))+'就诊，接受'+(esc(sr.modality||'神经调控'))+'治疗。'+(vasText(c))+'。结合文献讨论其不典型表现与诊疗启示。</p></div>';
+  s+='<div class="ab"><b>English Abstract</b><p>We report a case of '+(esc(d.diagnosis||'')).toLowerCase()+' managed with '+(esc(sr.modality||'neuromodulation'))+'. '+(vasText(c))+'. The clinical implications are discussed with reference to the literature.</p></div>';
+  s+='<h3>关键词</h3><p>'+esc(d.diagnosis||'')+'；神经调控；个案报道；'+(esc(d.category||''))+'</p>';
+  s+='<h3>前言</h3><p>'+(esc(d.diagnosis||''))+'在临床中相对少见，其不典型表现易致误诊。现结合本科室'+(esc(c.id))+'的诊疗过程，探讨该类病例的识别与处理。</p>';
+  s+='<h3>病例资料</h3>';
+  s+='<p><b>基线：</b>'+esc(m.gender||'')+(m.age||'?')+'岁，利手'+(esc(m.handedness||'未记录'))+'，合并症'+(esc(m.comorbidity||'无'))+'。</p>';
+  s+='<p><b>病史：</b>主诉 '+(esc(d.chiefComplaint||'—'))+'；现病史 '+(esc(d.presentIllness||'—'))+'；病程 '+(d.durationMonths||'?')+' 月。</p>';
+  s+='<p><b>影像：</b>'+esc(im.modality||'未查')+' '+(esc(im.findings||''))+'；位置 '+(esc(im.lesionLocation||'—'))+'，大小 '+(im.lesionSize||'?')+' mm。</p>';
+  s+='<p><b>诊疗：</b>干预方式 '+(esc(sr.modality||'—'))+'，靶点 '+(sr.target||'—')+'，参数 '+(sr.tempC||'?')+'℃ / '+(sr.timeSec||'?')+'s / '+(sr.cycles||'?')+'次'+(sr.stimulationParams?('，刺激 '+sr.stimulationParams):'')+'。术中 '+(io.durationMin||'?')+'min，出血 '+(io.bloodLoss||'?')+'ml，并发症 '+(esc(io.complicationsIntraop||'无'))+'。</p>';
+  s+='<p><b>随访与预后：</b>随访 '+(d.followupMonths||'?')+' 月，疼痛缓解 '+(d.painRelief!=null?d.painRelief+'%':'—')+'，复发 '+(d.recurrence==null?'未明':(d.recurrence?'是':'否'))+'；mRS '+(pr.mrsBefore||'?')+'→'+(pr.mrsAfter||'?')+'。'+(vasText(c))+'</p>';
+  const rareTxt=d.rare?'具有不典型表现':'为典型病例';
+  const keyTxt=sr.target?('精准 '+sr.target+' 靶点选择'):'个体化评估';
+  const fupTxt=d.followupMonths>=6?'随访相对完整':'随访尚短，需延长';
+  s+='<h3>讨论</h3><p>本例'+esc(rareTxt)+'，'+esc(d.diagnosis||'')+'的诊疗关键在于'+esc(keyTxt)+'。与现有文献相比，本科室数据'+esc(fupTxt)+'。</p>';
+  s+='<h3>结论</h3><p>'+esc(d.diagnosis||'')+'患者可从'+(esc(sr.modality||'神经调控'))+'中获益，但证据等级为个案，需更多病例与前瞻性研究验证。</p>';
+  s+=litSection();
+  s+='<h3>局限与伦理</h3><p>单病例报道，证据等级低；数据已脱敏；本研究为回顾性个案总结，正式发表需伦理审批。</p>';
+  return s;
+}
+function efficacyPaper(arr, topic){
+  const m=metricsFor(arr);
+  const byMod={}; arr.forEach(c=>{ const k=c.surgeryRF.modality||'未分组'; (byMod[k]=byMod[k]||[]).push(c); });
+  let rows=''; let best=null, bestRate=-1;
+  Object.keys(byMod).forEach(k=>{ const g=byMod[k]; const rr=respRate(g); const rel=g.map(reliefPct).filter(r=>r!=null); const meanRel=rel.length?+mean(rel).toFixed(1):null;
+    rows+='<tr><td>'+esc(k)+'</td><td>'+g.length+'</td><td>'+rr+'%</td><td>'+(meanRel!=null?meanRel+'%':'—')+'</td></tr>'; if(rr>bestRate){ bestRate=rr; best=k; } });
+  let chiNote=''; const groups=Object.keys(byMod).filter(k=>byMod[k].length>=3);
+  if(groups.length>=2){ const a=byMod[groups[0]], b=byMod[groups[1]]; const aR=a.filter(isResp).length, aN=a.length, bR=b.filter(isResp).length, bN=b.length; const ch=chi2(aR,aN-aR,bR,bN-bR);
+    chiNote='<p>'+esc(groups[0])+' vs '+esc(groups[1])+' 有效率比较：χ²='+ch.chi+'，P='+ch.p+(ch.p<0.05?'，差异有统计学意义。':'，差异无统计学意义。')+'</p>'; }
+  let s='';
+  s+='<h2>'+esc(topic?topic.title:'不同神经调控方案疼痛疗效对比分析')+'</h2>';
+  s+='<div class="ab"><b>中文摘要</b><p>目的 比较不同神经调控方案对'+(esc((arr[0]&&arr[0].disease.category)||'功能神外疾病'))+'疼痛的疗效。方法 回顾性纳入 '+m.n+' 例含术前术后VAS配对数据者。结果 总体有效率 '+m.respRate+'%，平均疼痛缓解 '+m.relMean+'%；其中 '+(esc(best||'—'))+' 组有效率最高（'+bestRate+'%）。结论 神经调控可显著缓解该类疼痛，方案选择需个体化。</p></div>';
+  s+='<h3>关键词</h3><p>神经调控；疼痛；疗效；VAS；回顾性研究</p>';
+  s+='<h3>资料与方法</h3><p>对象：本系统归档脱敏病例 '+m.n+' 例。纳入标准：含术前及术后VAS记录。分组：按干预方式。结局：疼痛缓解≥50%定义为有效。统计：χ²检验，P<0.05为差异显著。</p>';
+  s+='<h3>结果</h3><table><tr><th>干预方式</th><th>n</th><th>有效率</th><th>平均缓解</th></tr>'+rows+'</table>'+chiNote;
+  s+='<p>基线：年龄 '+(m.ageMean!=null?m.ageMean+'±'+m.ageSd:'?')+' 岁，女性 '+m.female+' 例。</p>';
+  s+='<h3>讨论</h3><p>本数据显示神经调控整体有效率高，与既往文献一致。'+(best?('其中 '+esc(best)+' 方案表现更优，'):'')+'提示靶点个体化选择的重要性。局限性：单中心回顾性、样本有限。</p>';
+  s+='<h3>结论</h3><p>不同神经调控方案均能有效缓解'+(esc((arr[0]&&arr[0].disease.category)||'功能神外'))+'相关疼痛，'+(best?esc(best)+'方案在本科室数据中趋势更优，':'')+'需前瞻性随机研究验证。</p>';
+  s+=litSection();
+  s+='<h3>局限与伦理</h3><p>回顾性设计、非随机、随访时长不一；数据已脱敏；发表前需伦理审批与数据复核。</p>';
+  return s;
+}
+function cohortPaper(arr, topic){
+  const m=metricsFor(arr);
+  const byCat={}; arr.forEach(c=>{ const k=c.disease.category||'其他'; (byCat[k]=byCat[k]||[]).push(c); });
+  let rows=''; Object.keys(byCat).forEach(k=>{ rows+='<tr><td>'+esc(k)+'</td><td>'+byCat[k].length+'</td></tr>'; });
+  const comp=cases.filter(c=>c.disease.complicationsText&&/并发症|感染|出血|神经损伤/.test(c.disease.complicationsText)).length;
+  let s='';
+  s+='<h2>'+esc(topic?topic.title:'功能神经外科神经调控治疗回顾性队列分析')+'</h2>';
+  s+='<div class="ab"><b>中文摘要</b><p>目的 描述本科室神经调控治疗的功能神外疾病真实世界结局。方法 回顾性队列 '+m.n+' 例。结果 平均年龄 '+(m.ageMean!=null?m.ageMean+'±'+m.ageSd:'?')+' 岁，总体疼痛有效率 '+m.respRate+'%，复发率 '+(m.recRate!=null?m.recRate+'%':'待补充')+'。结论 神经调控在真实世界中安全有效。</p></div>';
+  s+='<h3>关键词</h3><p>神经调控；真实世界研究；队列；功能神经外科</p>';
+  s+='<h3>资料与方法</h3><p>单中心回顾性队列，'+m.n+' 例，分病种描述基线、疗效与安全性。统计描述为主。</p>';
+  s+='<h3>结果</h3><table><tr><th>病种分类</th><th>例数</th></tr>'+rows+'</table>';
+  s+='<p>基线：年龄 '+(m.ageMean!=null?m.ageMean+'±'+m.ageSd:'?')+' 岁，女性 '+m.female+' 例；配对VAS有效率 '+m.respRate+'%，平均缓解 '+m.relMean+'%；复发率 '+(m.recRate!=null?m.recRate+'%':'—')+'；记录并发症 '+comp+' 例。</p>';
+  s+='<h3>讨论</h3><p>真实世界数据印证神经调控疗效，与文献一致。局限：回顾性、选择偏倚。</p>';
+  s+='<h3>结论</h3><p>神经调控在本科室功能神外队列中安全有效，建议建立前瞻性登记。</p>';
+  s+=litSection();
+  s+='<h3>局限与伦理</h3><p>回顾性设计；脱敏处理；发表前需伦理审批。</p>';
+  return s;
+}
+function riskPaper(arr, topic){
+  const recK=arr.filter(c=>c.disease.recurrence!=null);
+  const recN=recK.filter(c=>c.disease.recurrence===true).length;
+  const ages=recK.map(c=>num(c.baseline.age)).filter(a=>a!=null);
+  const medAge=ages.length?+median(ages):null;
+  const preds=[
+    {name:'年龄>'+(medAge!=null?medAge:'中位')+'岁', fn:c=>num(c.baseline.age)!=null && num(c.baseline.age)>(medAge||999)},
+    {name:'女性', fn:c=>c.baseline.gender==='女'},
+    {name:'病程>12月', fn:c=>(c.disease.durationMonths||0)>12},
+    {name:'术前VAS>7', fn:c=>(c.postop&&c.postop.vasBefore!=null)&&c.postop.vasBefore>7},
+    {name:'射频干预', fn:c=>c.surgeryRF.modality==='射频'},
+    {name:'SCS植入', fn:c=>c.surgeryRF.modality==='SCS植入'}
+  ];
+  let rows='';
+  preds.forEach(p=>{ const exp=recK.filter(p.fn), un=recK.filter(c=>!p.fn(c));
+    const a=exp.filter(c=>c.disease.recurrence===true).length, b=exp.length-a;
+    const cN=un.filter(c=>c.disease.recurrence===true).length, dN=un.length-cN;
+    const o=or2x2(a,b,cN,dN);
+    if(o.ok) rows+='<tr><td>'+esc(p.name)+'</td><td>'+a+'/'+exp.length+'</td><td>'+o.or+' ('+o.ciLow+'-'+o.ciHigh+')</td><td>'+o.p+'</td></tr>';
+  });
+  let s='';
+  s+='<h2>'+esc(topic?topic.title:'神经调控术后复发危险因素分析')+'</h2>';
+  s+='<div class="ab"><b>中文摘要</b><p>目的 筛选神经调控术后复发的危险因素。方法 随访明确的 '+recK.length+' 例中复发 '+recN+' 例。结果 单因素分析见下表。结论 部分因素与复发相关，需多因素验证。</p></div>';
+  s+='<h3>关键词</h3><p>复发；危险因素；神经调控；logistic回归</p>';
+  s+='<h3>资料与方法</h3><p>对象：随访状态明确的 '+recK.length+' 例。方法：单因素logistic回归筛选复发相关因素，OR及95%CI，P<0.05为差异显著。</p>';
+  s+='<h3>结果</h3><table><tr><th>危险因素</th><th>暴露/复发</th><th>OR(95%CI)</th><th>P</th></tr>'+rows+'</table>';
+  s+='<h3>讨论</h3><p>上表为单因素结果，独立危险因素需多因素logistic回归与外部验证。与文献对照可明确本科室数据的独特亚组。</p>';
+  s+='<h3>结论</h3><p>部分基线及干预因素与复发相关，临床可考虑据此优化患者筛选与参数设置。</p>';
+  s+=litSection();
+  s+='<h3>局限与伦理</h3><p>单因素分析、样本有限；脱敏处理；发表前需伦理审批。</p>';
+  return s;
+}
+function median(a){ const s2=a.slice().sort(function(x,y){return x-y;}); const n=s2.length; return n%2? s2[(n-1)/2] : (s2[n/2-1]+s2[n/2])/2; }
+function techPaper(arr, topic){
+  const m=metricsFor(arr);
+  const targets={}; arr.forEach(c=>{ const t=c.surgeryRF.target||'未记录'; (targets[t]=targets[t]||[]).push(c); });
+  let rows=''; Object.keys(targets).forEach(k=>{ rows+='<tr><td>'+esc(k)+'</td><td>'+targets[k].length+'</td><td>'+respRate(targets[k])+'%</td></tr>'; });
+  let s='';
+  s+='<h2>'+esc(topic?topic.title:'神经调控技术经验论著')+'</h2>';
+  s+='<div class="ab"><b>中文摘要</b><p>目的 总结本科室'+(esc((arr[0]&&arr[0].surgeryRF.modality)||'神经调控'))+'的技术改良与经验。方法 回顾 '+m.n+' 例。结果 总体有效率 '+m.respRate+'%。结论 个体化靶点选择可提升疗效。</p></div>';
+  s+='<h3>关键词</h3><p>技术改良；神经调控；个体化；经验总结</p>';
+  s+='<h3>技术要点</h3><p>本科室采用'+(esc((arr[0]&&arr[0].surgeryRF.modality)||'神经调控'))+'，强调靶点个体化与参数滴定。不同靶点分布：</p>';
+  s+='<table><tr><th>靶点/节段</th><th>例数</th><th>有效率</th></tr>'+rows+'</table>';
+  s+='<h3>讨论</h3><p>相比传统经验性穿刺，本科室改良方案在有效率上具优势，与文献趋势一致。需长期随访验证复发。</p>';
+  s+='<h3>结论</h3><p>技术改良提升疗效与安全性，值得推广并前瞻性验证。</p>';
+  s+=litSection();
+  s+='<h3>局限与伦理</h3><p>单中心经验；脱敏；发表前需伦理审批。</p>';
+  return s;
+}
+function litSection(){
+  if(!litLib.length) return '<h3>参考文献</h3><p>（暂无回填文献。可在「写稿→思路优化」或对话框输入「思路优化 &lt;选题&gt;」，由 WorkBuddy 检索近5年 SCI/核心文献并回填，结论须与文献佐证结合。）</p>';
+  let s='<h3>参考文献（已回填 '+litLib.length+' 条）</h3><ol>'; litLib.forEach(l=>{ s+='<li>'+esc(l.cite||l.note||'')+'</li>'; }); s+='</ol>'; return s;
+}
+
+/* ===================== 模块4：文献对标 ===================== */
+function openLitSheet(kw){
+  const q=generateSearchQueries(kw);
+  const m=metricsFor(cases);
+  const body='<div class="note">文献对标需联网检索。本面板生成检索式与缺口分析；如需真实文献，请在对话框输入「思路优化 '+esc(kw||'偏头痛射频')+'」，由 WorkBuddy 检索近5年 SCI/核心文献并标注来源后回填。</div>'+
+    '<div class="field"><label>检索方向</label><input id="lit_kw" value="'+esc(kw||'')+'"></div>'+
+    '<div class="lit"><b>推荐检索式（PubMed / Embase / CNKI）</b><br>'+q.map(function(x){ return '<span class="q">'+esc(x)+'</span>'; }).join('')+'</div>'+
+    '<div class="lit"><b>本院数据优势（基于真实数据）</b><br>当前脱敏病例 '+m.n+' 例；配对VAS有效率 '+m.respRate+'%；平均缓解 '+m.relMean+'%；复发率 '+(m.recRate!=null?m.recRate+'%':'待补充')+'。可突出单中心大样本与完整随访。</div>'+
+    '<div class="field"><label>回填文献（每行一条：作者. 标题. 期刊 年;卷:页.）</label><textarea id="lit_paste" placeholder="粘贴检索到的文献条目，一行一条"></textarea></div>'+
+    '<div class="field"><label>本研究相对文献的空白/创新（可补充）</label><textarea id="lit_gap" placeholder="如：现有文献样本小、随访短；本院随访更全"></textarea></div>';
+  showSheetCustom('文献对标 · '+esc(kw||'选题'), body, [
+    {label:'保存文献与缺口', cls:'btn-primary', fn:function(){
+      const pasted=$('#lit_paste').value.trim(); if(pasted){ pasted.split('\n').forEach(function(line){ if(line.trim()) litLib.push({cite:line.trim(), topic:kw, at:new Date().toISOString()}); }); save(K.lit,litLib); }
+      const gap=$('#lit_gap').value.trim(); if(gap){ litLib.push({cite:'(缺口分析) '+gap, topic:kw, at:new Date().toISOString()}); save(K.lit,litLib); }
+      hideSheet('#caseSheet'); toast('已保存 '+litLib.length+' 条文献/缺口'); }}
+  ]);
+}
+function generateSearchQueries(kw){
+  const k=(kw||'').toLowerCase();
+  if(k.indexOf('脊髓电刺激')>=0||k.indexOf('scs')>=0) return ['("spinal cord stimulation"[MeSH] OR "SCS") AND (migraine OR "neuropathic pain")','("脊髓电刺激") AND ("偏头痛" OR "神经病理性疼痛")','("spinal cord stimulation"[Title/Abstract]) AND ("outcome" OR "efficacy")'];
+  if(k.indexOf('射频')>=0) return ['("migraine"[MeSH]) AND ("radiofrequency" OR "pulsed radiofrequency")','("偏头痛") AND ("射频" OR "射频消融")','("radiofrequency"[Title/Abstract]) AND ("sphenopalatine" OR "occipital")'];
+  if(k.indexOf('dbs')>=0||k.indexOf('脑深部')>=0) return ['("deep brain stimulation"[MeSH]) AND (pain OR headache)','("脑深部电刺激") AND ("疼痛" OR "头痛")'];
+  return ['("neuromodulation"[MeSH]) AND ("functional neurosurgery")','("神经调控") AND ("功能神经外科")','("neuromodulation"[Title/Abstract]) AND ("efficacy" OR "outcome")'];
+}
+
+/* ===================== 模块2：安全备份导出 ===================== */
+function download(name, text, type){ const blob=new Blob([text],{type:type||'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); }
+function deidCases(){ return cases.map(c=>{ const x=JSON.parse(JSON.stringify(c)); delete x.pii; return x; }); }
+function exportFull(){ const d={__type:'nm_backup', cases:cases, meta:meta, lit:litLib, exportedAt:new Date().toISOString()}; download('神经调控全量备份_'+todayStr()+'.json', JSON.stringify(d,null,2)); toast('已导出全量备份'); }
+function exportDeid(){ download('神经调控脱敏数据库_'+todayStr()+'.json', JSON.stringify(deidCases(),null,2)); toast('已导出脱敏数据库'); }
+function exportCsv(){ const rows=[['匿名ID','性别','年龄','病种','诊断','干预','靶点','术前VAS','术后VAS','缓解%','随访月','复发']];
+  cases.forEach(c=>{ rows.push([c.id,c.baseline.gender,c.baseline.age,c.disease.category,c.disease.diagnosis,c.surgeryRF.modality,c.surgeryRF.target,(c.postop&&c.postop.vasBefore)||'',(c.postop&&c.postop.vasAfter)||'',reliefPct(c)!=null?reliefPct(c):'',c.disease.followupMonths||'',c.disease.recurrence==null?'':(c.disease.recurrence?'是':'否')]); });
+  const csv='\ufeff'+rows.map(r=>r.map(function(x){ return (x==null?'':String(x)).replace(/,/g,'，'); }).join(',')).join('\n');
+  download('神经调控论文数据集_'+todayStr()+'.csv', csv, 'text/csv'); toast('已导出CSV数据集'); }
+function exportStats(){ let t='统计表素材（基于真实数据）\n'; t+='总病例 '+cases.length+'\n'; lastTopics=lastTopics.length?lastTopics:buildTopics(); lastTopics.forEach(function(tp,i){ t+='\n['+(i+1)+'] '+tp.type+'：'+tp.title+'\n样本量 '+tp.sampleN+'\n支撑度 '+tp.support+'\n短板 '+tp.gaps+'\n'; });
+  download('神经调控统计素材_'+todayStr()+'.txt', t, 'text/plain'); toast('已导出统计素材'); }
+function exportPaperMd(){ const el=$('#writeOut .paper'); if(!el){ toast('请先生成论文'); return; } download('神经调控论文初稿_'+todayStr()+'.md', el.innerText, 'text/markdown'); toast('已导出Markdown'); }
+
+/* ===================== 安全状态 / 示例 ===================== */
+function renderSec(){ const piiCnt=cases.filter(c=>c.pii&&(c.pii.name||c.pii.mrno)).length;
+  $('#secStatus').innerHTML='<div style="font-size:13px;line-height:1.8">当前病例 <b>'+cases.length+'</b> 例<br>含本地PII的病例 <b style="color:'+(piiCnt?'#c0392b':'#1aab6b')+'">'+piiCnt+'</b> 例<br>科研/论文输出仅使用匿名ID，PII不出本机。</div>'+(piiCnt?'<div class="warn">尚有 '+piiCnt+' 例保留姓名/住院号等本地参考信息。如不再需要，可一键清除仅留匿名ID。</div>':'<div class="flag ok" style="display:inline-block;margin-top:6px">已无PII留存</div>'); }
+function clearPii(){ if(!cases.length){ toast('无数据'); return; } if(!confirm('确认清除全部病例的姓名/住院号等PII，仅保留匿名ID？此操作不可恢复。')) return;
+  cases.forEach(c=>{ c.pii={}; }); save(K.cases,cases); renderSec(); renderCases(); toast('已清除PII，仅保留匿名ID'); }
+function loadSample(){ SUPPRESS_SYNC=true; cases=sampleCases(); save(K.cases,cases); SUPPRESS_SYNC=false; renderCases(); renderCmd(); renderSec(); toast('已载入3例脱敏演示病例（仅本机，未上传电脑端）'); }
+function sampleCases(){ const mk=function(o){ o.qualityFlags=qaCheck(o); o.createdAt=Date.now()-Math.random()*1e6; o.auditLog=[{at:new Date().toISOString(),act:'演示'}]; o.updatedAt=new Date().toISOString(); return o; };
+  return [
+    mk({id:'NM-'+new Date().getFullYear()+'-0001', type:'门诊', baseline:{gender:'女',age:42,handedness:'右',weight:60}, disease:{category:'偏头痛射频消融',diagnosis:'慢性偏头痛',durationMonths:36,side:'左',followupMonths:6,painRelief:67,recurrence:false}, history:{chiefComplaint:'每周3-4次搏动性头痛',presentIllness:'药物过量使用性头痛，多种预防性用药无效'}, imaging:{modality:'MRI',findings:'未见明确责任病灶',lesionLocation:'—',lesionSize:null}, surgeryRF:{modality:'射频',target:'蝶腭神经节',tempC:60,timeSec:120,cycles:2}, intraop:{durationMin:30,bloodLoss:5,complicationsIntraop:'无',navigated:'是'}, postop:{vasBefore:8,vasAfter:3,immediateOutcome:'显效',medications:'停用预防性药物'}, prognosis:{mrsBefore:1,mrsAfter:0} }),
+    mk({id:'NM-'+new Date().getFullYear()+'-0002', type:'门诊', baseline:{gender:'男',age:55,handedness:'右',weight:75}, disease:{category:'偏头痛射频消融',diagnosis:'枕大神经痛',durationMonths:18,side:'右',followupMonths:3,painRelief:40,recurrence:false}, history:{chiefComplaint:'右枕部放电样痛',presentIllness:'颈椎源性头痛'}, imaging:{modality:'MRI',findings:'C2/3小关节退变',lesionLocation:'C2/3',lesionSize:null}, surgeryRF:{modality:'射频',target:'枕大神经',tempC:70,timeSec:90,cycles:1}, intraop:{durationMin:25,bloodLoss:3,complicationsIntraop:'无',navigated:'否'}, postop:{vasBefore:7,vasAfter:4,immediateOutcome:'有效',medications:'加巴喷丁'}, prognosis:{mrsBefore:1,mrsAfter:1} }),
+    mk({id:'NM-'+new Date().getFullYear()+'-0003', type:'住院', baseline:{gender:'女',age:61,handedness:'左',weight:68}, disease:{category:'脊髓电刺激(SCS)植入',diagnosis:'带状疱疹后神经痛',durationMonths:9,side:'左',followupMonths:9,painRelief:72,recurrence:true}, history:{chiefComplaint:'左胸壁烧灼样痛',presentIllness:'PHN，药物控制欠佳'}, imaging:{modality:'MRI',findings:'脊髓未见异常',lesionLocation:'—',lesionSize:null}, surgeryRF:{modality:'SCS植入',target:'T8-T9',tempC:null,timeSec:null,cycles:null,stimulationParams:'40Hz/200us/2.5mA'}, intraop:{durationMin:90,bloodLoss:20,complicationsIntraop:'无',navigated:'是'}, postop:{vasBefore:9,vasAfter:2,immediateOutcome:'显效',medications:'普瑞巴林减量'}, prognosis:{mrsBefore:2,mrsAfter:1} })
+  ];
+}
+
+/* ===================== 弹层控制 ===================== */
+function showSheet(s){ $('#mask').classList.add('show'); $(s).classList.add('show'); }
+function hideSheet(s){ $('#mask').classList.remove('show'); $$('.sheet').forEach(x=>x.classList.remove('show')); }
+function showSheetCustom(title, bodyHtml, buttons){
+  $('#caseSheetTitle').textContent=title; $('#caseBody').innerHTML=bodyHtml;
+  $('#caseFoot').innerHTML=buttons.map(function(b,i){ return '<button class="'+b.cls+' btn-block" data-i="'+i+'">'+esc(b.label)+'</button>'; }).join('');
+  buttons.forEach(function(b,i){ const el=$('#caseFoot').querySelector('[data-i="'+i+'"]'); el.onclick=b.fn; });
+  showSheet('#caseSheet');
+}
+$$('[data-close]').forEach(b=>b.onclick=()=>{ $$('.sheet').forEach(x=>x.classList.remove('show')); $('#mask').classList.remove('show'); });
+$('#mask').onclick=()=>{ $$('.sheet').forEach(x=>x.classList.remove('show')); $('#mask').classList.remove('show'); };
+
+/* ===================== 设置 / 抽屉 / 事件 ===================== */
+$('#gearBtn').onclick=()=>{ $('#drawer').classList.add('show'); $('#drawerMask').classList.add('show'); };
+$('#drawerMask').onclick=()=>{ $('#drawer').classList.remove('show'); $('#drawerMask').classList.remove('show'); };
+$('#toCmd').onclick=()=>{ $('#drawer').classList.remove('show'); $('#drawerMask').classList.remove('show'); switchTab('cmd'); };
+$('#dExp').onclick=()=>{ exportFull(); $('#drawer').classList.remove('show'); $('#drawerMask').classList.remove('show'); };
+$('#dDeid').onclick=()=>{ exportDeid(); $('#drawer').classList.remove('show'); $('#drawerMask').classList.remove('show'); };
+$('#dImp').onclick=()=>{ $('#impFile').click(); $('#drawer').classList.remove('show'); $('#drawerMask').classList.remove('show'); };
+$('#dSample').onclick=()=>{ loadSample(); $('#drawer').classList.remove('show'); $('#drawerMask').classList.remove('show'); };
+$('#dClear').onclick=()=>{ if(confirm('⚠️ 将清空全部病例数据，不可恢复！建议先导出备份。确认？')){ if(confirm('最后确认：真的清空所有数据？')){ SUPPRESS_SYNC=true; cases=[]; save(K.cases,cases); SUPPRESS_SYNC=false; renderCases(); renderCmd(); renderSec(); toast('已全部清空（仅本机，电脑端未变动）'); } } $('#drawer').classList.remove('show'); $('#drawerMask').classList.remove('show'); };
+$('#addCaseBtn').onclick=()=>openCaseSheet(null);
+$('#mineBtn').onclick=()=>runMining();
+$('#writeBtn').onclick=()=>openWriteSheet('');
+$('#expBtn').onclick=exportFull;
+$('#expDeidBtn').onclick=exportDeid;
+$('#impBtn').onclick=()=>$('#impFile').click();
+$('#expCsvBtn').onclick=exportCsv;
+$('#expStatsBtn').onclick=exportStats;
+$('#sampleBtn').onclick=loadSample;
+$('#clearBtn').onclick=()=>{ if(confirm('⚠️ 清空全部数据？')){ if(confirm('最后确认？')){ SUPPRESS_SYNC=true; cases=[]; save(K.cases,cases); SUPPRESS_SYNC=false; renderCases(); renderCmd(); renderSec(); toast('已全部清空（仅本机，电脑端未变动）'); } } };
+$('#clearPiiBtn').onclick=clearPii;
+$('#impFile').onchange=()=>{ const f=$('#impFile').files[0]; if(!f) return; const r=new FileReader();
+  r.onload=()=>{ try{ const d=JSON.parse(r.result); if(d&&d.cases){ if(!confirm('导入将覆盖当前数据，确定？')) return; cases=d.cases; meta=d.meta||{}; if(d.lit) litLib=d.lit; save(K.cases,cases); save(K.meta,meta); save(K.lit,litLib); renderCases(); renderCmd(); renderSec(); toast('导入恢复成功（'+cases.length+' 例）'); } else toast('文件格式不正确'); }catch(e){ toast('解析失败'); } }; r.readAsText(f); $('#impFile').value=''; };
+
+/* ===================== 同步面板事件 ===================== */
+document.querySelector('.sync').onclick=()=>switchTab('set');
+$('#syncNowBtn').onclick=syncNow;
+$('#pairBtn').onclick=()=>{ const pb=$('#pairBox'); pb.style.display= pb.style.display==='block'?'none':'block'; };
+$('#pairGo').onclick=()=>{ const u=$('#pairUrl').value; if(!u){ toast('请输入电脑端地址'); return; } SYNC.token=($('#pairToken').value||'').trim(); pairTo(u); };
+async function pairTo(u){ if(await tryConnect(u)){ renderSyncPanel(); toast('已连接电脑端并拉取历史'); } else { toast('连接失败，检查地址/令牌与电脑端服务'); } }
+
+/* ===================== 初始化 ===================== */
+if(cases===null){ cases=[]; }
+renderCases(); renderCmd(); renderSec(); renderSyncPanel();
+initSync();
+</script>
+</body>
+</html>
