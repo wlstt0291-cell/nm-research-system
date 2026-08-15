@@ -198,6 +198,10 @@
   .mini-btn{ font-size:12px; padding:5px 10px; border:1px solid var(--line,#dfe3ea); background:var(--bg2,#f4f6fa); color:var(--ink,#1f2733); border-radius:7px; cursor:pointer; }
   .mini-btn:hover{ background:var(--brand,#07C160); color:#fff; border-color:var(--brand,#07C160); }
   .mini-btn.ghost{ background:transparent; }
+  .imgthumbs{ display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+  .imgthumb{ position:relative; width:78px; height:78px; border-radius:8px; overflow:hidden; border:1px solid var(--line,#dfe3ea); background:#fff; }
+  .imgthumb img{ width:100%; height:100%; object-fit:cover; }
+  .imgdel{ position:absolute; top:2px; right:2px; width:18px; height:18px; border:none; border-radius:50%; background:rgba(0,0,0,.55); color:#fff; font-size:13px; line-height:18px; cursor:pointer; padding:0; }
 </style>
 <!-- SHEETJS_EMBED_START -->
 <script>
@@ -354,7 +358,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       <h3>筛选条件（均支持模糊匹配）</h3>
       <div class="grid2">
         <div class="field"><label>诊断（不分左右，主要内容一致即归一类）</label><input id="stDx" placeholder="如 三叉神经痛"></div>
-        <div class="field"><label>手术 / 干预方式</label><input id="stOp" placeholder="如 射频 / SCS / 蝶腭神经节"></div>
+        <div class="field"><label>手术 / 干预方式</label><input id="stOp" list="modOptions" placeholder="如 射频 / SCS / 蝶腭神经节"></div>
       </div>
       <div class="grid2">
         <div class="field"><label>床位医生 / 主管医师</label><input id="stDoc" placeholder="如 张"></div>
@@ -368,6 +372,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       <div class="note" style="margin-top:8px">诊断模糊：自动忽略左/右/侧，例如「三叉神经痛」与「左侧三叉神经痛」归为同一类统计。时间段按手术日期（无则建档日期）筛选。</div>
     </div>
     <datalist id="catOptions"></datalist>
+    <datalist id="modOptions"></datalist>
     <div id="statsResult"><div class="empty">设置筛选条件后点击「查询统计」。</div></div>
   </section>
 
@@ -424,16 +429,16 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 <script>
 "use strict";
 /* ===================== 存储层 ===================== */
-const K={ cases:'nm_cases', meta:'nm_meta', lit:'nm_lit', cats:'nm_categories' };
+const K={ cases:'nm_cases', meta:'nm_meta', lit:'nm_lit', cats:'nm_categories', mods:'nm_mods' };
 /* ============ 电脑端同步层（数据唯一落盘在电脑端服务） ============ */
 const SYNC={ enabled:false, base:'', token:localStorage.getItem('nm_sync_token')||'', lanUrls:[], localUrl:'', pendingDeletes:new Set() };
 let SUPPRESS_SYNC=false;
 function setSyncBadge(text, ok){ const t=$('#syncText'); if(t) t.textContent=text; const dot=document.querySelector('.sync .dot'); if(dot) dot.style.background= ok?'#7dffb0':'#f2c14e'; }
 function syncBaseGuess(){ if(typeof location!=='undefined' && /^https?:$/.test(location.protocol)) return location.origin; return localStorage.getItem('nm_sync_url')||null; }
 async function apiGet(p){ const r=await fetch(SYNC.base+p+(SYNC.token?('?t='+encodeURIComponent(SYNC.token)):''),{cache:'no-store'}); if(!r.ok) throw new Error('http'); return r.json(); }
-async function pullFromServer(){ const db=await apiGet('/api/db'); cases=db.cases||[]; meta=db.meta||{}; litLib=db.litLib||[]; if(Array.isArray(db.cats)&&db.cats.length){ CATS=mergeCats(CATS,db.cats); localStorage.setItem(K.cats,JSON.stringify(CATS)); } localStorage.setItem(K.cases,JSON.stringify(cases)); localStorage.setItem(K.meta,JSON.stringify(meta)); localStorage.setItem(K.lit,JSON.stringify(litLib)); renderCases(); renderCmd(); renderSec(); refreshCatOptions(); }
+async function pullFromServer(){ const db=await apiGet('/api/db'); cases=db.cases||[]; meta=db.meta||{}; litLib=db.litLib||[]; if(Array.isArray(db.cats)&&db.cats.length){ CATS=mergeCats(CATS,db.cats); localStorage.setItem(K.cats,JSON.stringify(CATS)); } if(Array.isArray(db.mods)&&db.mods.length){ MODS=mergeMods(MODS,db.mods); localStorage.setItem(K.mods,JSON.stringify(MODS)); } localStorage.setItem(K.cases,JSON.stringify(cases)); localStorage.setItem(K.meta,JSON.stringify(meta)); localStorage.setItem(K.lit,JSON.stringify(litLib)); renderCases(); renderCmd(); renderSec(); refreshCatOptions(); refreshModOptions(); }
 let _pushTimer=null;
-function pushToServer(){ if(!SYNC.enabled) return; clearTimeout(_pushTimer); _pushTimer=setTimeout(async()=>{ const payload={cases:cases, meta:meta, litLib:litLib, cats:CATS, deletedIds:[...SYNC.pendingDeletes], clientUpdatedAt:Date.now()}; SYNC.pendingDeletes.clear(); try{ const r=await fetch(SYNC.base+'/api/db'+(SYNC.token?('?t='+encodeURIComponent(SYNC.token)):''),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); const db=await r.json(); cases=db.cases||[]; meta=db.meta||{}; litLib=db.litLib||[]; localStorage.setItem(K.cases,JSON.stringify(cases)); localStorage.setItem(K.meta,JSON.stringify(meta)); localStorage.setItem(K.lit,JSON.stringify(litLib)); setSyncBadge('已同步至电脑端 · '+cases.length+'例', true); renderCases(); renderCmd(); renderSec(); }catch(e){ setSyncBadge('同步失败，已存本地', false); } }, 350); }
+function pushToServer(){ if(!SYNC.enabled) return; clearTimeout(_pushTimer); _pushTimer=setTimeout(async()=>{ const payload={cases:cases, meta:meta, litLib:litLib, cats:CATS, mods:MODS, deletedIds:[...SYNC.pendingDeletes], clientUpdatedAt:Date.now()}; SYNC.pendingDeletes.clear(); try{ const r=await fetch(SYNC.base+'/api/db'+(SYNC.token?('?t='+encodeURIComponent(SYNC.token)):''),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); const db=await r.json(); cases=db.cases||[]; meta=db.meta||{}; litLib=db.litLib||[]; localStorage.setItem(K.cases,JSON.stringify(cases)); localStorage.setItem(K.meta,JSON.stringify(meta)); localStorage.setItem(K.lit,JSON.stringify(litLib)); setSyncBadge('已同步至电脑端 · '+cases.length+'例', true); renderCases(); renderCmd(); renderSec(); }catch(e){ setSyncBadge('同步失败，已存本地', false); } }, 350); }
 let _autoSyncTimer=null;
 function startAutoSync(){ if(_autoSyncTimer) return; _autoSyncTimer=setInterval(()=>{ if(SYNC.enabled){ pullFromServer().then(pushToServer).catch(()=>{}); } }, 20000); }
 async function tryConnect(base){ base=(base||'').trim().replace(/\/$/,''); if(!base) return false; try{ const r=await fetch(base+'/api/status'+(SYNC.token?('?t='+encodeURIComponent(SYNC.token)):''),{cache:'no-store'}); if(!r.ok) return false; const s=await r.json(); SYNC.enabled=true; SYNC.base=base; SYNC.lanUrls=s.lanUrls||[]; SYNC.localUrl=s.localUrl||base; localStorage.setItem('nm_sync_url', base); localStorage.setItem('nm_sync_token', SYNC.token); setSyncBadge('已连接电脑端 · '+s.count+'例', true); startAutoSync(); await pullFromServer(); return true; }catch(e){ return false; } }
@@ -442,7 +447,7 @@ async function syncNow(){ if(!SYNC.enabled){ toast('未连接电脑端'); return
 function showQR(target){ const img=$('#qrImg'), wrap=$('#qrWrap'); if(!img||!wrap) return; if(!SYNC.enabled){ wrap.style.display='none'; return; } img.onerror=()=>{ wrap.style.display='none'; }; img.src=SYNC.base+'/api/qr?url='+encodeURIComponent(target)+(SYNC.token?('&t='+encodeURIComponent(SYNC.token)):''); wrap.style.display='block'; }
 function renderSyncPanel(){ const info=$('#syncInfo'), qrWrap=$('#qrWrap'), pairBox=$('#pairBox'); if(!info) return; if(!SYNC.enabled){ info.innerHTML='<div class="warn">当前为本地模式，数据仅存本机浏览器（双重保存的一端）。点「连接电脑端」填入电脑的公网或局域网地址并连接后，两端会互相补齐最新数据；未连接时本机数据不丢，电脑关机也不影响本机打开。</div>'; if(qrWrap) qrWrap.style.display='none'; if(pairBox) pairBox.style.display='block'; return; } const isHost=(typeof location!=='undefined' && location.origin===SYNC.base); if(isHost){ const lan=SYNC.lanUrls[0]||SYNC.base; const allAddr=(SYNC.lanUrls||[]).map(u=>'<b>'+esc(u)+'</b>').join(' &nbsp;或&nbsp; '); let pub=''; if(SYNC.token) pub='<div style="font-size:11.5px;color:var(--amber);margin-top:4px">已启用令牌：手机从公网连接须填相同令牌。</div>'; info.innerHTML='<div class="flag ok" style="display:inline-block">本机即电脑端 · 数据已落盘本机</div><div style="font-size:12px;color:var(--muted);margin-top:6px">手机连同一 Wi-Fi 后，扫描二维码或打开下方地址即可读取历史、实时写入本机。</div><div style="font-size:12px;margin-top:6px">手机可打开地址：'+allAddr+'</div><div style="font-size:11.5px;color:var(--muted);margin-top:4px">（.local 地址不随 IP 变化更稳定；若要从公网访问，请在路由器/隧道把本端口映射到公网，并在手机端填公网地址+令牌）</div>'+pub; showQR(lan); if(pairBox) pairBox.style.display='none'; } else { info.innerHTML='<div class="flag ok" style="display:inline-block">已连接电脑端 '+esc(SYNC.base)+'</div><div style="font-size:12px;color:var(--muted);margin-top:6px">本机与电脑端双重保存，任一端录入后自动互相同步补齐。切换请点「连接电脑端」。</div>'; if(qrWrap) qrWrap.style.display='none'; if(pairBox) pairBox.style.display='block'; } }
 function load(k,def){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):def; }catch(e){ return def; } }
-function save(k,v){ localStorage.setItem(k,JSON.stringify(v)); flashSync(); if(SYNC.enabled && !SUPPRESS_SYNC && (k===K.cases||k===K.meta||k===K.lit||k===K.cats)) pushToServer(); }
+function save(k,v){ localStorage.setItem(k,JSON.stringify(v)); flashSync(); if(SYNC.enabled && !SUPPRESS_SYNC && (k===K.cases||k===K.meta||k===K.lit||k===K.cats||k===K.mods)) pushToServer(); }
 let cases=load(K.cases,null);
 let meta=load(K.meta,{});
 let litLib=load(K.lit,[]);
@@ -522,6 +527,17 @@ function saveCats(){ save(K.cats, CATS); }
 function toggleAddCat(){ const b=document.getElementById('catAddBox'); if(!b) return; b.style.display=(b.style.display==='none'||!b.style.display)?'block':'none'; }
 function commitAddCat(){ const inp=document.getElementById('newCat'); if(!inp) return; const v=inp.value.trim(); if(!v) return; if(CATS.indexOf(v)<0){ CATS=mergeCats(CATS,[v]); saveCats(); } const sel=document.getElementById('f_cat'); if(sel) sel.value=v; inp.value=''; const box=document.getElementById('catAddBox'); if(box) box.style.display='none'; toast('已添加分类：'+v); refreshCatOptions(); }
 function refreshCatOptions(){ const dl=document.getElementById('catOptions'); if(!dl) return; dl.innerHTML=CATS.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join(''); }
+let MODS=load(K.mods,['射频','SCS植入','DBS植入','其他']);
+function mergeMods(a,b){ const out=(a||[]).slice(); (b||[]).forEach(x=>{ if(out.indexOf(x)<0) out.push(x); }); return out; }
+function saveMods(){ save(K.mods, MODS); }
+function toggleAddMod(){ const b=document.getElementById('modAddBox'); if(!b) return; b.style.display=(b.style.display==='flex')?'none':'flex'; }
+function commitAddMod(){ const inp=document.getElementById('newMod'); if(!inp) return; const v=inp.value.trim(); if(!v) return; if(MODS.indexOf(v)<0){ MODS=mergeMods(MODS,[v]); saveMods(); } const sel=document.getElementById('f_smod'); if(sel) sel.value=v; inp.value=''; const box=document.getElementById('modAddBox'); if(box) box.style.display='none'; toast('已添加干预方式：'+v); refreshModOptions(); }
+function refreshModOptions(){ const dl=document.getElementById('modOptions'); if(!dl) return; dl.innerHTML=MODS.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join(''); }
+let ioImgsDraft=[];
+function handleIoImgFiles(input){ const files=input.files; if(!files||!files.length) return; Array.from(files).forEach(function(file){ const reader=new FileReader(); reader.onload=function(){ compressImage(reader.result,1280,0.82,function(dataUrl){ ioImgsDraft.push({name:file.name,data:dataUrl}); renderIoImgs(); }); }; reader.readAsDataURL(file); }); input.value=''; }
+function compressImage(dataUrl,maxDim,quality,cb){ const img=new Image(); img.onload=function(){ let w=img.width,h=img.height; if(w>maxDim||h>maxDim){ const r=w/h; if(w>=h){ w=maxDim; h=Math.round(maxDim/r); } else { h=maxDim; w=Math.round(maxDim*r); } } const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(img,0,0,w,h); cb(cv.toDataURL('image/jpeg',quality)); }; img.src=dataUrl; }
+function renderIoImgs(){ const box=document.getElementById('ioImgs'); if(!box) return; box.innerHTML=ioImgsDraft.map(function(im,i){ return '<div class="imgthumb"><img src="'+im.data+'" alt=""><button type="button" class="imgdel" onclick="delIoImg('+i+')">×</button></div>'; }).join(''); }
+function delIoImg(i){ ioImgsDraft.splice(i,1); renderIoImgs(); }
 const FUP_PERIODS=[{k:'week1',l:'术后一周',m:0.25},{k:'month1',l:'术后一月',m:1},{k:'month3',l:'术后三月',m:3},{k:'month6',l:'术后六月',m:6},{k:'long',l:'长期随访',m:12}];
 function fv(arr,k,key){ if(!arr) return ''; const f=arr.find(x=>x.period===k); return f?(f[key]||''):''; }
 function monthsBetween(a,b){ if(!a||!b) return 0; const da=new Date(a), db=new Date(b); if(isNaN(da)||isNaN(db)) return 0; const ms=db-da; return Math.max(0, Math.round(ms/(1000*86400*30.44)*10)/10); }
@@ -534,9 +550,10 @@ function openCaseSheet(editId){
   caseEditId=editId||null; caseDraft=editId?JSON.parse(JSON.stringify(cases.find(x=>x.id===editId))):null;
   $('#caseSheetTitle').textContent=editId?'编辑病例':'添加脱敏病例';
   $('#caseBody').innerHTML=caseFormHTML(caseDraft);
+  ioImgsDraft=(caseDraft&&caseDraft.intraop&&caseDraft.intraop.images)?caseDraft.intraop.images.slice():[]; renderIoImgs();
   $('#caseFoot').innerHTML='<button class="btn btn-ghost btn-block" id="caseFreeBtn">自由文本智能解析</button><button class="btn btn-primary btn-block" id="caseSave">保存（自动脱敏入库）</button>';
   $('#caseFreeBtn').onclick=()=>{ const txt=$('#f_free').value; if(!txt.trim()){ toast('请先粘贴/输入自由文本'); return; }
-    const p=parseFreeText(txt); caseDraft=caseDraft||{}; deepMerge(caseDraft,p); $('#caseBody').innerHTML=caseFormHTML(caseDraft); toast('已尝试解析填充，请核对修正'); };
+    const p=parseFreeText(txt); caseDraft=caseDraft||{}; deepMerge(caseDraft,p); $('#caseBody').innerHTML=caseFormHTML(caseDraft); renderIoImgs(); toast('已尝试解析填充，请核对修正'); };
   $('#caseSave').onclick=saveCase;
   showSheet('#caseSheet');
 }
@@ -601,7 +618,11 @@ function caseFormHTML(d){
   '<details><summary>⑤ 手术 / 射频参数</summary><div class="body">'+
     '<div class="grid2">'+
       '<div class="field"><label>手术日期</label><input id="f_surgdate" type="date" value="'+esc(v(d,'surgeryDate'))+'"></div>'+
-      '<div class="field"><label>干预方式</label><select id="f_smod"><option '+(v(sr,'modality')==='射频'?'selected':'')+'>射频</option><option '+(v(sr,'modality')==='SCS植入'?'selected':'')+'>SCS植入</option><option '+(v(sr,'modality')==='DBS植入'?'selected':'')+'>DBS植入</option><option '+(v(sr,'modality')==='其他'?'selected':'')+'>其他</option></select></div>'+
+      '<div class="field"><label>干预方式</label>'+
+      '<select id="f_smod">'+MODS.map(function(m){ return '<option '+(v(sr,'modality')===m?'selected':'')+'>'+esc(m)+'</option>'; }).join('')+'</select>'+
+      '<div class="cat-row"><button type="button" class="mini-btn" onclick="toggleAddMod()">+ 新增</button></div>'+
+      '<div id="modAddBox" class="cat-add"><input id="newMod" placeholder="输入新干预方式"><button type="button" class="mini-btn" onclick="commitAddMod()">添加</button></div>'+
+      '</div>'+
     '</div>'+
     '<div class="grid2">'+
       '<div class="field"><label>靶点/节段</label><input id="f_target" value="'+esc(v(sr,'target'))+'" placeholder="如 C2/C3 背根神经节"></div>'+
@@ -619,7 +640,12 @@ function caseFormHTML(d){
       '<div class="field"><label>出血量(ml)</label><input id="f_ibl" value="'+esc(v(io,'bloodLoss'))+'"></div>'+
     '</div>'+
     '<div class="field"><label>术中并发症</label><input id="f_ioc" value="'+esc(v(io,'complicationsIntraop'))+'" placeholder="无/具体"></div>'+
-    '<div class="field"><label>导航/电生理监测</label><input id="f_ionav" value="'+esc(v(io,'navigated'))+'" placeholder="是/否"></div>'+
+    '<div class="field"><label>术中影像支持</label><input id="f_ionav" value="'+esc(v(io,'navigated'))+'" placeholder="如 使用/未用/导航+电生理"></div>'+
+    '<div class="field"><label>术中影像图片（可多选上传）</label>'+
+    '<div class="cat-row"><button type="button" class="mini-btn" onclick="document.getElementById(\'ioImgFile\').click()">+ 上传影像</button></div>'+
+    '<input type="file" id="ioImgFile" accept="image/*" multiple style="display:none" onchange="handleIoImgFiles(this)">'+
+    '<div id="ioImgs" class="imgthumbs"></div>'+
+    '</div>'+
   '</div></details>'+
   '<details><summary>⑦ 术后指标</summary><div class="body">'+
     '<div class="grid2">'+
@@ -661,7 +687,7 @@ function saveCase(){
   obj.history={ chiefComplaint:g('f_cc'), presentIllness:g('f_pi') };
   obj.imaging={ modality:g('f_imod'), findings:g('f_ifind'), lesionLocation:g('f_iloc'), lesionSize:num(g('f_isize')) };
   obj.surgeryRF={ modality:g('f_smod'), target:g('f_target'), tempC:num(g('f_temp')), timeSec:num(g('f_time')), cycles:num(g('f_cycles')), stimulationParams:g('f_stim') };
-  obj.intraop={ durationMin:num(g('f_iodur')), bloodLoss:num(g('f_ibl')), complicationsIntraop:g('f_ioc'), navigated:g('f_ionav') };
+  obj.intraop={ durationMin:num(g('f_iodur')), bloodLoss:num(g('f_ibl')), complicationsIntraop:g('f_ioc'), navigated:g('f_ionav'), images:ioImgsDraft.slice() };
   obj.postop={ vasBefore:num(g('f_vasb')), vasAfter:num(g('f_vasa')), scoreBefore:g('f_scoreb'), scoreAfter:g('f_scorea'), immediateOutcome:g('f_imme'), medications:g('f_med') };
   obj.prognosis={ mrsBefore:num(g('f_mrsb')), mrsAfter:num(g('f_mrsa')), mrs:num(g('f_mrsb')) };
   const _fups=collectFollowups('fu_'); obj.followups=_fups;
@@ -775,14 +801,9 @@ function buildTopics(){
       sampleN:eff.length, innovation:'多方案同台对比，突出本科室个体化靶点选择优势', support:parts.length>=2?'高':'中',
       gaps: parts.length<2?'分组样本不足，难以做组间比较':'需补充盲法与长期随访', _cases:eff });
   }
-  const rf=cases.filter(c=>c.surgeryRF.modality==='射频');
-  if(rf.length>=5){ T.push({ type:'技术经验论著', title:'偏头痛射频消融个体化靶点治疗经验（'+rf.length+'例）',
-    why:'数据集含 '+rf.length+' 例偏头痛射频病例，可总结本科室个体化靶点、参数改良与适配人群经验。',
-    sampleN:rf.length, innovation:'突出改良靶点选择与参数个体化，对比传统经验性穿刺', support:'中', gaps:'需补充与文献对照的长期复发数据', _cases:rf }); }
-  const scs=cases.filter(c=>c.surgeryRF.modality==='SCS植入');
-  if(scs.length>=5){ T.push({ type:'技术经验论著', title:'脊髓电刺激植入治疗神经病理性疼痛经验（'+scs.length+'例）',
-    why:'数据集含 '+scs.length+' 例 SCS 植入病例，可总结适配人群、参数程控与疗效维持经验。',
-    sampleN:scs.length, innovation:'突出本科室 SCS 适配人群筛选与程控策略', support:'中', gaps:'需补充生活质量量表随访', _cases:scs }); }
+  MODS.forEach(function(m){ const grp=cases.filter(c=>c.surgeryRF.modality===m); if(grp.length>=5){ T.push({ type:'技术经验论著', title:m+'治疗经验与技术改良（'+grp.length+'例）',
+    why:'数据集含 '+grp.length+' 例 '+m+' 病例，可总结本科室 '+m+' 的适配人群、技术与疗效经验。',
+    sampleN:grp.length, innovation:'突出本科室 '+m+' 个体化方案与参数改良', support:'中', gaps:'需补充长期随访与对照数据', _cases:grp }); } });
   if(cases.length>=10){ T.push({ type:'回顾性队列研究', title:'功能神经外科神经调控治疗回顾性队列分析（n='+cases.length+'）',
     why:cases.length+' 例覆盖多病种与多干预方式，可构建单中心真实世界队列，描述基线、疗效与安全性结局。',
     sampleN:cases.length, innovation:'单中心大样本真实世界数据，结局指标齐全', support:'高', gaps:'回顾性设计，存在选择偏倚', _cases:cases }); }
@@ -918,9 +939,7 @@ function riskPaper(arr, topic){
     {name:'女性', fn:c=>c.baseline.gender==='女'},
     {name:'病程>12月', fn:c=>(c.disease.durationMonths||0)>12},
     {name:'术前VAS>7', fn:c=>(c.postop&&c.postop.vasBefore!=null)&&c.postop.vasBefore>7},
-    {name:'射频干预', fn:c=>c.surgeryRF.modality==='射频'},
-    {name:'SCS植入', fn:c=>c.surgeryRF.modality==='SCS植入'}
-  ];
+  ].concat(MODS.map(function(m){ return {name:m+'干预', fn:c=>c.surgeryRF.modality===m}; }));
   let rows='';
   preds.forEach(p=>{ const exp=recK.filter(p.fn), un=recK.filter(c=>!p.fn(c));
     const a=exp.filter(c=>c.disease.recurrence===true).length, b=exp.length-a;
@@ -1123,6 +1142,7 @@ if(cases===null){ cases=[]; }
 renderCases(); renderCmd(); renderSec(); renderSyncPanel();
 initSync();
 refreshCatOptions();
+refreshModOptions();
 </script>
 </body>
 </html>
