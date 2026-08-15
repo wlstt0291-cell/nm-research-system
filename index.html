@@ -92,7 +92,7 @@
   @media (max-width:700px){ .grid4{grid-template-columns:1fr 1fr;} }
   @media (max-width:560px){
     .grid3{grid-template-columns:1fr 1fr;}
-    .grid2 > .field:has(input[type=date]),.grid3 > .field:has(input[type=date]),.grid4 > .field:has(input[type=date]){grid-column:1/-1;}
+    .grid2 .date-field,.grid3 .date-field,.grid4 .date-field{grid-column:1/-1;}
     .fup-row .grid4 .fup-rec{grid-column:1/-1;}
   }
   .fup-row{border:1px solid var(--line);border-radius:12px;padding:9px 10px;margin-bottom:9px;background:#fcfdff;}
@@ -373,8 +373,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         <div class="field"><label>病种分类</label><input id="stCat" list="catOptions" placeholder="留空=全部，可输入或选用"></div>
       </div>
       <div class="grid2">
-        <div class="field"><label>收录起（手术/建档日期）</label><input id="stStart" type="date"></div>
-        <div class="field"><label>收录止</label><input id="stEnd" type="date"></div>
+        <div class="field date-field"><label>收录起（手术/建档日期）</label><input id="stStart" type="date"></div>
+        <div class="field date-field"><label>收录止</label><input id="stEnd" type="date"></div>
       </div>
       <button class="btn btn-primary btn-block" id="stRun">查询统计</button>
       <div class="note" style="margin-top:8px">诊断模糊：自动忽略左/右/侧，例如「三叉神经痛」与「左侧三叉神经痛」归为同一类统计。时间段按手术日期（无则建档日期）筛选。</div>
@@ -625,7 +625,7 @@ function caseFormHTML(d){
   '</div></details>'+
   '<details><summary>⑤ 手术 / 射频参数</summary><div class="body">'+
     '<div class="grid2">'+
-      '<div class="field"><label>手术日期</label><input id="f_surgdate" type="date" value="'+esc(v(d,'surgeryDate'))+'"></div>'+
+      '<div class="field date-field"><label>手术日期</label><input id="f_surgdate" type="date" value="'+esc(v(d,'surgeryDate'))+'"></div>'+
       '<div class="field"><label>干预方式</label>'+
       '<select id="f_smod">'+MODS.map(function(m){ return '<option '+(v(sr,'modality')===m?'selected':'')+'>'+esc(m)+'</option>'; }).join('')+'</select>'+
       '<div class="cat-row"><button type="button" class="mini-btn" onclick="toggleAddMod()">+ 新增</button></div>'+
@@ -672,7 +672,7 @@ function caseFormHTML(d){
     FUP_PERIODS.map(function(p){ return ''+
       '<div class="fup-row"><div class="fup-h">'+p.l+'</div>'+
       '<div class="grid4">'+
-        '<div class="field"><label>随访日期</label><input id="fu_'+p.k+'_date" type="date" value="'+esc(fv(d.followups,p.k,'date'))+'"></div>'+
+        '<div class="field date-field"><label>随访日期</label><input id="fu_'+p.k+'_date" type="date" value="'+esc(fv(d.followups,p.k,'date'))+'"></div>'+
         '<div class="field"><label>缓解%</label><input id="fu_'+p.k+'_relief" type="number" value="'+esc(fv(d.followups,p.k,'relief'))+'"></div>'+
         '<div class="field"><label>当前VAS</label><input id="fu_'+p.k+'_vas" type="number" value="'+esc(fv(d.followups,p.k,'vas'))+'"></div>'+
         '<div class="field fup-rec"><label>复发</label><select id="fu_'+p.k+'_rec"><option value="">未知</option><option '+(fv(d.followups,p.k,'recurrence')===true?'selected':'')+'>是</option><option '+(fv(d.followups,p.k,'recurrence')===false?'selected':'')+'>否</option></select></div>'+
@@ -756,7 +756,7 @@ function openFollowSheet(caseId){
   const body='<div class="note">为 '+esc(c.id)+' 按固定节点补充 / 修改随访，保存后增量更新并自动合并「最近一次随访」。</div>'+
     FUP_PERIODS.map(function(p){ const f=cur.find(x=>x.period===p.k)||{}; return ''+
       '<div class="fup-row"><div class="fup-h">'+p.l+'</div><div class="grid4">'+
-      '<div class="field"><label>随访日期</label><input id="fs_'+p.k+'_date" type="date" value="'+esc(f.date||'')+'"></div>'+
+      '<div class="field date-field"><label>随访日期</label><input id="fs_'+p.k+'_date" type="date" value="'+esc(f.date||'')+'"></div>'+
       '<div class="field"><label>缓解%</label><input id="fs_'+p.k+'_relief" type="number" value="'+esc(f.relief!=null?f.relief:'')+'"></div>'+
       '<div class="field"><label>当前VAS</label><input id="fs_'+p.k+'_vas" type="number" value="'+esc(f.vas!=null?f.vas:'')+'"></div>'+
       '<div class="field fup-rec"><label>复发</label><select id="fs_'+p.k+'_rec"><option value="">未知</option><option '+(f.recurrence===true?'selected':'')+'>是</option><option '+(f.recurrence===false?'selected':'')+'>否</option></select></div>'+
