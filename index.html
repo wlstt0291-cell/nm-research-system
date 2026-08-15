@@ -86,7 +86,10 @@
   .field textarea{resize:vertical;min-height:58px;}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
   .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
-  .grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;}
+  .grid4{display:grid;grid-template-columns:1.3fr 1fr 1fr 0.8fr;gap:6px;}
+  .grid3 > .field,.grid4 > .field{min-width:0;}
+  .grid3 > .field input,.grid3 > .field select,.grid4 > .field input,.grid4 > .field select{width:100%;max-width:100%;box-sizing:border-box;}
+  @media (max-width:640px){ .grid4{grid-template-columns:1fr 1fr;} }
   .fup-row{border:1px solid var(--line);border-radius:12px;padding:9px 10px;margin-bottom:9px;background:#fcfdff;}
   .fup-row .fup-h{font-size:13px;font-weight:700;color:var(--primary-d);margin-bottom:6px;}
   .stat-filter .field{margin-bottom:9px;}
