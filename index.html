@@ -79,17 +79,17 @@
   .sheet .sh-body{padding:14px 18px;overflow-y:auto;}
   .sheet .sh-foot{padding:12px 18px 16px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px;}
   .closeX{border:none;background:#f0f3f8;width:32px;height:32px;border-radius:50%;font-size:18px;color:var(--muted);cursor:pointer;}
-  .field{margin-bottom:11px;}
+  .field{margin-bottom:11px;min-width:0;}
   .field label{display:block;font-size:12.5px;font-weight:600;color:#41506a;margin-bottom:5px;}
-  .field input,.field textarea,.field select{width:100%;border:1.5px solid var(--line);border-radius:11px;padding:10px 12px;font-size:15px;background:#fbfcfe;color:var(--text);font-family:inherit;}
+  .field input,.field textarea,.field select{width:100%;min-width:0;box-sizing:border-box;border:1.5px solid var(--line);border-radius:11px;padding:10px 12px;font-size:15px;background:#fbfcfe;color:var(--text);font-family:inherit;}
   .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--primary);outline:none;}
   .field textarea{resize:vertical;min-height:58px;}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
-  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
-  .grid4{display:grid;grid-template-columns:1.3fr 1fr 1fr 0.8fr;gap:6px;}
-  .grid3 > .field,.grid4 > .field{min-width:0;}
-  .grid3 > .field input,.grid3 > .field select,.grid4 > .field input,.grid4 > .field select{width:100%;max-width:100%;box-sizing:border-box;}
-  @media (max-width:640px){ .grid4{grid-template-columns:1fr 1fr;} }
+  .grid2,.grid3,.grid4{display:grid;gap:9px;min-width:0;}
+  .grid2{grid-template-columns:1fr 1fr;}
+  .grid3{grid-template-columns:1fr 1fr 1fr;}
+  .grid4{grid-template-columns:1.2fr 1fr 1fr 0.9fr;}
+  .field input[type=date]{min-width:0;}
+  @media (max-width:560px){ .grid3,.grid4{grid-template-columns:1fr 1fr;} }
   .fup-row{border:1px solid var(--line);border-radius:12px;padding:9px 10px;margin-bottom:9px;background:#fcfdff;}
   .fup-row .fup-h{font-size:13px;font-weight:700;color:var(--primary-d);margin-bottom:6px;}
   .stat-filter .field{margin-bottom:9px;}
