@@ -87,9 +87,14 @@
   .grid2,.grid3,.grid4{display:grid;gap:9px;min-width:0;}
   .grid2{grid-template-columns:1fr 1fr;}
   .grid3{grid-template-columns:1fr 1fr 1fr;}
-  .grid4{grid-template-columns:1.2fr 1fr 1fr 0.9fr;}
-  .field input[type=date]{min-width:0;}
-  @media (max-width:560px){ .grid3,.grid4{grid-template-columns:1fr 1fr;} }
+  .grid4{grid-template-columns:1.5fr 1fr 1fr 0.9fr;}
+  .field input[type=date]{min-width:0;max-width:100%;}
+  @media (max-width:700px){ .grid4{grid-template-columns:1fr 1fr;} }
+  @media (max-width:560px){
+    .grid3{grid-template-columns:1fr 1fr;}
+    .grid2 > .field:has(input[type=date]),.grid3 > .field:has(input[type=date]),.grid4 > .field:has(input[type=date]){grid-column:1/-1;}
+    .fup-row .grid4 .fup-rec{grid-column:1/-1;}
+  }
   .fup-row{border:1px solid var(--line);border-radius:12px;padding:9px 10px;margin-bottom:9px;background:#fcfdff;}
   .fup-row .fup-h{font-size:13px;font-weight:700;color:var(--primary-d);margin-bottom:6px;}
   .stat-filter .field{margin-bottom:9px;}
@@ -670,7 +675,7 @@ function caseFormHTML(d){
         '<div class="field"><label>随访日期</label><input id="fu_'+p.k+'_date" type="date" value="'+esc(fv(d.followups,p.k,'date'))+'"></div>'+
         '<div class="field"><label>缓解%</label><input id="fu_'+p.k+'_relief" type="number" value="'+esc(fv(d.followups,p.k,'relief'))+'"></div>'+
         '<div class="field"><label>当前VAS</label><input id="fu_'+p.k+'_vas" type="number" value="'+esc(fv(d.followups,p.k,'vas'))+'"></div>'+
-        '<div class="field"><label>复发</label><select id="fu_'+p.k+'_rec"><option value="">未知</option><option '+(fv(d.followups,p.k,'recurrence')===true?'selected':'')+'>是</option><option '+(fv(d.followups,p.k,'recurrence')===false?'selected':'')+'>否</option></select></div>'+
+        '<div class="field fup-rec"><label>复发</label><select id="fu_'+p.k+'_rec"><option value="">未知</option><option '+(fv(d.followups,p.k,'recurrence')===true?'selected':'')+'>是</option><option '+(fv(d.followups,p.k,'recurrence')===false?'selected':'')+'>否</option></select></div>'+
       '</div>'+
       '<div class="field"><label>记录 / 处理</label><input id="fu_'+p.k+'_note" value="'+esc(fv(d.followups,p.k,'note'))+'"></div>'+
     '</div>'; }).join('')+
@@ -754,7 +759,7 @@ function openFollowSheet(caseId){
       '<div class="field"><label>随访日期</label><input id="fs_'+p.k+'_date" type="date" value="'+esc(f.date||'')+'"></div>'+
       '<div class="field"><label>缓解%</label><input id="fs_'+p.k+'_relief" type="number" value="'+esc(f.relief!=null?f.relief:'')+'"></div>'+
       '<div class="field"><label>当前VAS</label><input id="fs_'+p.k+'_vas" type="number" value="'+esc(f.vas!=null?f.vas:'')+'"></div>'+
-      '<div class="field"><label>复发</label><select id="fs_'+p.k+'_rec"><option value="">未知</option><option '+(f.recurrence===true?'selected':'')+'>是</option><option '+(f.recurrence===false?'selected':'')+'>否</option></select></div>'+
+      '<div class="field fup-rec"><label>复发</label><select id="fs_'+p.k+'_rec"><option value="">未知</option><option '+(f.recurrence===true?'selected':'')+'>是</option><option '+(f.recurrence===false?'selected':'')+'>否</option></select></div>'+
       '</div><div class="field"><label>记录 / 处理</label><input id="fs_'+p.k+'_note" value="'+esc(f.note||'')+'"></div></div>';
     }).join('');
   showSheetCustom('随访节点 · '+c.id, body, [
