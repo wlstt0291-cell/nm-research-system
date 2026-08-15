@@ -191,6 +191,13 @@
     #caseList{ grid-template-columns:1fr 1fr 1fr; }
     .tabpane{ max-width:1360px; }
   }
+  .cat-row{ display:flex; gap:6px; align-items:center; }
+  .cat-row select{ flex:1; }
+  .cat-add{ display:none; margin-top:6px; gap:6px; align-items:center; }
+  .cat-add input{ flex:1; }
+  .mini-btn{ font-size:12px; padding:5px 10px; border:1px solid var(--line,#dfe3ea); background:var(--bg2,#f4f6fa); color:var(--ink,#1f2733); border-radius:7px; cursor:pointer; }
+  .mini-btn:hover{ background:var(--brand,#07C160); color:#fff; border-color:var(--brand,#07C160); }
+  .mini-btn.ghost{ background:transparent; }
 </style>
 <!-- SHEETJS_EMBED_START -->
 <script>
@@ -351,7 +358,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       </div>
       <div class="grid2">
         <div class="field"><label>床位医生 / 主管医师</label><input id="stDoc" placeholder="如 张"></div>
-        <div class="field"><label>病种分类</label><input id="stCat" placeholder="留空=全部，如 偏头痛射频消融"></div>
+        <div class="field"><label>病种分类</label><input id="stCat" list="catOptions" placeholder="留空=全部，可输入或选用"></div>
       </div>
       <div class="grid2">
         <div class="field"><label>收录起（手术/建档日期）</label><input id="stStart" type="date"></div>
@@ -360,6 +367,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       <button class="btn btn-primary btn-block" id="stRun">查询统计</button>
       <div class="note" style="margin-top:8px">诊断模糊：自动忽略左/右/侧，例如「三叉神经痛」与「左侧三叉神经痛」归为同一类统计。时间段按手术日期（无则建档日期）筛选。</div>
     </div>
+    <datalist id="catOptions"></datalist>
     <div id="statsResult"><div class="empty">设置筛选条件后点击「查询统计」。</div></div>
   </section>
 
@@ -416,16 +424,16 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 <script>
 "use strict";
 /* ===================== 存储层 ===================== */
-const K={ cases:'nm_cases', meta:'nm_meta', lit:'nm_lit' };
+const K={ cases:'nm_cases', meta:'nm_meta', lit:'nm_lit', cats:'nm_categories' };
 /* ============ 电脑端同步层（数据唯一落盘在电脑端服务） ============ */
 const SYNC={ enabled:false, base:'', token:localStorage.getItem('nm_sync_token')||'', lanUrls:[], localUrl:'', pendingDeletes:new Set() };
 let SUPPRESS_SYNC=false;
 function setSyncBadge(text, ok){ const t=$('#syncText'); if(t) t.textContent=text; const dot=document.querySelector('.sync .dot'); if(dot) dot.style.background= ok?'#7dffb0':'#f2c14e'; }
 function syncBaseGuess(){ if(typeof location!=='undefined' && /^https?:$/.test(location.protocol)) return location.origin; return localStorage.getItem('nm_sync_url')||null; }
 async function apiGet(p){ const r=await fetch(SYNC.base+p+(SYNC.token?('?t='+encodeURIComponent(SYNC.token)):''),{cache:'no-store'}); if(!r.ok) throw new Error('http'); return r.json(); }
-async function pullFromServer(){ const db=await apiGet('/api/db'); cases=db.cases||[]; meta=db.meta||{}; litLib=db.litLib||[]; localStorage.setItem(K.cases,JSON.stringify(cases)); localStorage.setItem(K.meta,JSON.stringify(meta)); localStorage.setItem(K.lit,JSON.stringify(litLib)); renderCases(); renderCmd(); renderSec(); }
+async function pullFromServer(){ const db=await apiGet('/api/db'); cases=db.cases||[]; meta=db.meta||{}; litLib=db.litLib||[]; if(Array.isArray(db.cats)&&db.cats.length){ CATS=mergeCats(CATS,db.cats); localStorage.setItem(K.cats,JSON.stringify(CATS)); } localStorage.setItem(K.cases,JSON.stringify(cases)); localStorage.setItem(K.meta,JSON.stringify(meta)); localStorage.setItem(K.lit,JSON.stringify(litLib)); renderCases(); renderCmd(); renderSec(); refreshCatOptions(); }
 let _pushTimer=null;
-function pushToServer(){ if(!SYNC.enabled) return; clearTimeout(_pushTimer); _pushTimer=setTimeout(async()=>{ const payload={cases:cases, meta:meta, litLib:litLib, deletedIds:[...SYNC.pendingDeletes], clientUpdatedAt:Date.now()}; SYNC.pendingDeletes.clear(); try{ const r=await fetch(SYNC.base+'/api/db'+(SYNC.token?('?t='+encodeURIComponent(SYNC.token)):''),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); const db=await r.json(); cases=db.cases||[]; meta=db.meta||{}; litLib=db.litLib||[]; localStorage.setItem(K.cases,JSON.stringify(cases)); localStorage.setItem(K.meta,JSON.stringify(meta)); localStorage.setItem(K.lit,JSON.stringify(litLib)); setSyncBadge('已同步至电脑端 · '+cases.length+'例', true); renderCases(); renderCmd(); renderSec(); }catch(e){ setSyncBadge('同步失败，已存本地', false); } }, 350); }
+function pushToServer(){ if(!SYNC.enabled) return; clearTimeout(_pushTimer); _pushTimer=setTimeout(async()=>{ const payload={cases:cases, meta:meta, litLib:litLib, cats:CATS, deletedIds:[...SYNC.pendingDeletes], clientUpdatedAt:Date.now()}; SYNC.pendingDeletes.clear(); try{ const r=await fetch(SYNC.base+'/api/db'+(SYNC.token?('?t='+encodeURIComponent(SYNC.token)):''),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); const db=await r.json(); cases=db.cases||[]; meta=db.meta||{}; litLib=db.litLib||[]; localStorage.setItem(K.cases,JSON.stringify(cases)); localStorage.setItem(K.meta,JSON.stringify(meta)); localStorage.setItem(K.lit,JSON.stringify(litLib)); setSyncBadge('已同步至电脑端 · '+cases.length+'例', true); renderCases(); renderCmd(); renderSec(); }catch(e){ setSyncBadge('同步失败，已存本地', false); } }, 350); }
 let _autoSyncTimer=null;
 function startAutoSync(){ if(_autoSyncTimer) return; _autoSyncTimer=setInterval(()=>{ if(SYNC.enabled){ pullFromServer().then(pushToServer).catch(()=>{}); } }, 20000); }
 async function tryConnect(base){ base=(base||'').trim().replace(/\/$/,''); if(!base) return false; try{ const r=await fetch(base+'/api/status'+(SYNC.token?('?t='+encodeURIComponent(SYNC.token)):''),{cache:'no-store'}); if(!r.ok) return false; const s=await r.json(); SYNC.enabled=true; SYNC.base=base; SYNC.lanUrls=s.lanUrls||[]; SYNC.localUrl=s.localUrl||base; localStorage.setItem('nm_sync_url', base); localStorage.setItem('nm_sync_token', SYNC.token); setSyncBadge('已连接电脑端 · '+s.count+'例', true); startAutoSync(); await pullFromServer(); return true; }catch(e){ return false; } }
@@ -434,7 +442,7 @@ async function syncNow(){ if(!SYNC.enabled){ toast('未连接电脑端'); return
 function showQR(target){ const img=$('#qrImg'), wrap=$('#qrWrap'); if(!img||!wrap) return; if(!SYNC.enabled){ wrap.style.display='none'; return; } img.onerror=()=>{ wrap.style.display='none'; }; img.src=SYNC.base+'/api/qr?url='+encodeURIComponent(target)+(SYNC.token?('&t='+encodeURIComponent(SYNC.token)):''); wrap.style.display='block'; }
 function renderSyncPanel(){ const info=$('#syncInfo'), qrWrap=$('#qrWrap'), pairBox=$('#pairBox'); if(!info) return; if(!SYNC.enabled){ info.innerHTML='<div class="warn">当前为本地模式，数据仅存本机浏览器（双重保存的一端）。点「连接电脑端」填入电脑的公网或局域网地址并连接后，两端会互相补齐最新数据；未连接时本机数据不丢，电脑关机也不影响本机打开。</div>'; if(qrWrap) qrWrap.style.display='none'; if(pairBox) pairBox.style.display='block'; return; } const isHost=(typeof location!=='undefined' && location.origin===SYNC.base); if(isHost){ const lan=SYNC.lanUrls[0]||SYNC.base; const allAddr=(SYNC.lanUrls||[]).map(u=>'<b>'+esc(u)+'</b>').join(' &nbsp;或&nbsp; '); let pub=''; if(SYNC.token) pub='<div style="font-size:11.5px;color:var(--amber);margin-top:4px">已启用令牌：手机从公网连接须填相同令牌。</div>'; info.innerHTML='<div class="flag ok" style="display:inline-block">本机即电脑端 · 数据已落盘本机</div><div style="font-size:12px;color:var(--muted);margin-top:6px">手机连同一 Wi-Fi 后，扫描二维码或打开下方地址即可读取历史、实时写入本机。</div><div style="font-size:12px;margin-top:6px">手机可打开地址：'+allAddr+'</div><div style="font-size:11.5px;color:var(--muted);margin-top:4px">（.local 地址不随 IP 变化更稳定；若要从公网访问，请在路由器/隧道把本端口映射到公网，并在手机端填公网地址+令牌）</div>'+pub; showQR(lan); if(pairBox) pairBox.style.display='none'; } else { info.innerHTML='<div class="flag ok" style="display:inline-block">已连接电脑端 '+esc(SYNC.base)+'</div><div style="font-size:12px;color:var(--muted);margin-top:6px">本机与电脑端双重保存，任一端录入后自动互相同步补齐。切换请点「连接电脑端」。</div>'; if(qrWrap) qrWrap.style.display='none'; if(pairBox) pairBox.style.display='block'; } }
 function load(k,def){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):def; }catch(e){ return def; } }
-function save(k,v){ localStorage.setItem(k,JSON.stringify(v)); flashSync(); if(SYNC.enabled && !SUPPRESS_SYNC && (k===K.cases||k===K.meta||k===K.lit)) pushToServer(); }
+function save(k,v){ localStorage.setItem(k,JSON.stringify(v)); flashSync(); if(SYNC.enabled && !SUPPRESS_SYNC && (k===K.cases||k===K.meta||k===K.lit||k===K.cats)) pushToServer(); }
 let cases=load(K.cases,null);
 let meta=load(K.meta,{});
 let litLib=load(K.lit,[]);
@@ -508,7 +516,12 @@ $('#cmdChips').querySelectorAll('.c').forEach(el=>el.onclick=()=>{ const c=el.da
 
 /* ===================== 病例录入 ===================== */
 let caseEditId=null, caseDraft=null;
-const CATS=['偏头痛射频消融','脊髓电刺激(SCS)植入','脑深部电刺激(DBS)','其他功能神外'];
+let CATS=load(K.cats,['偏头痛射频消融','脊髓电刺激(SCS)植入','脑深部电刺激(DBS)','其他功能神外']);
+function mergeCats(a,b){ const out=(a||[]).slice(); (b||[]).forEach(x=>{ if(out.indexOf(x)<0) out.push(x); }); return out; }
+function saveCats(){ save(K.cats, CATS); }
+function toggleAddCat(){ const b=document.getElementById('catAddBox'); if(!b) return; b.style.display=(b.style.display==='none'||!b.style.display)?'block':'none'; }
+function commitAddCat(){ const inp=document.getElementById('newCat'); if(!inp) return; const v=inp.value.trim(); if(!v) return; if(CATS.indexOf(v)<0){ CATS=mergeCats(CATS,[v]); saveCats(); } const sel=document.getElementById('f_cat'); if(sel) sel.value=v; inp.value=''; const box=document.getElementById('catAddBox'); if(box) box.style.display='none'; toast('已添加分类：'+v); refreshCatOptions(); }
+function refreshCatOptions(){ const dl=document.getElementById('catOptions'); if(!dl) return; dl.innerHTML=CATS.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join(''); }
 const FUP_PERIODS=[{k:'week1',l:'术后一周',m:0.25},{k:'month1',l:'术后一月',m:1},{k:'month3',l:'术后三月',m:3},{k:'month6',l:'术后六月',m:6},{k:'long',l:'长期随访',m:12}];
 function fv(arr,k,key){ if(!arr) return ''; const f=arr.find(x=>x.period===k); return f?(f[key]||''):''; }
 function monthsBetween(a,b){ if(!a||!b) return 0; const da=new Date(a), db=new Date(b); if(isNaN(da)||isNaN(db)) return 0; const ms=db-da; return Math.max(0, Math.round(ms/(1000*86400*30.44)*10)/10); }
@@ -567,7 +580,7 @@ function caseFormHTML(d){
     '</div>'+
   '</div></details>'+
   '<details open><summary>③ 病种与病史</summary><div class="body">'+
-    '<div class="field"><label>病种分类</label><select id="f_cat">'+CATS.map(c=>'<option '+(v(di,'category')===c?'selected':'')+'>'+c+'</option>').join('')+'</select></div>'+
+    '<div class="field"><label>病种分类</label><div class="cat-row"><select id="f_cat">'+CATS.map(c=>'<option '+(v(di,'category')===c?'selected':'')+'>'+c+'</option>').join('')+'</select><button type="button" class="mini-btn" onclick="toggleAddCat()">+ 新增</button></div><div id="catAddBox" class="cat-add"><input id="newCat" placeholder="输入新分类名称"><button type="button" class="mini-btn" onclick="commitAddCat()">确定</button><button type="button" class="mini-btn ghost" onclick="toggleAddCat()">取消</button></div></div>'+
     '<div class="field"><label>诊断</label><input id="f_dx" value="'+esc(v(di,'diagnosis'))+'" placeholder="如 慢性偏头痛"></div>'+
     '<div class="grid2">'+
       '<div class="field"><label>病程(月)</label><input id="f_dur" type="number" value="'+esc(v(di,'durationMonths'))+'"></div>'+
@@ -1109,6 +1122,7 @@ async function pairTo(u){ if(await tryConnect(u)){ renderSyncPanel(); toast('已
 if(cases===null){ cases=[]; }
 renderCases(); renderCmd(); renderSec(); renderSyncPanel();
 initSync();
+refreshCatOptions();
 </script>
 </body>
 </html>
